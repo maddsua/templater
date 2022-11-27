@@ -12,7 +12,7 @@
 		"url": "git+https://github.com/maddsua/templater.git"
 	},
 	"scripts": {
-		"test": "node ../bin/index.js"
+		"test": "node ./bin/index.js"
 	},
 	"keywords": [
 		"template",
