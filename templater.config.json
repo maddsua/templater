@@ -1,12 +1,12 @@
 {
 	"files": [
 		{
-			"from": "test/source.htm",
-			"to": "test/public.html"
+			"from": "/test/source.htm",
+			"to": "/test/public.html"
 		}
 	],
-	"sourceDir": "/test/src",
-	"publicRoot": "test/public/",
+	"sourceDir": "/test/src/",
+	"publicRoot": "/test/public/",
 
 	"data": {
 		"vari1": "Text from var 1"
