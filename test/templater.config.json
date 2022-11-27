@@ -1,0 +1,13 @@
+{
+	"files": [
+		{
+			"from": "/source.htm",
+			"to": "/public.html"
+		}
+	],
+	"publicRoot": "/public/",
+
+	"data": {
+		"vari1": "Text from var 1"
+	}
+}

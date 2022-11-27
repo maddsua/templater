@@ -1,0 +1,31 @@
+{
+	"name": "templater",
+	"version": "1.0.0",
+	"description": "Builds HTML pages from templates",
+	"type": "module",
+	"bin": {
+		"tmr": "./bin/index.js",
+		"templater": "./bin/index.js"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/maddsua/templater.git"
+	},
+	"scripts": {
+		"test": "node ../bin/index.js"
+	},
+	"keywords": [
+		"template",
+		"html",
+		"netlify",
+		"static",
+		"build",
+		"page"
+	],
+	"author": "maddsua",
+	"license": "MIT",
+	"bugs": {
+		"url": "https://github.com/maddsua/templater/issues"
+	},
+	"homepage": "https://github.com/maddsua/templater#readme"
+}
