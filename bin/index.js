@@ -222,7 +222,7 @@ const addNestedPath = (path) => {
 			const result = compileTemplateFile(filepath.from, filepath.to);
 	
 			if (!result) console.log(`Processed '${filepath.from}'`);
-			else console.warn(result);
+			else console.error(result);
 	
 			if (watchMode) {
 				let sourceUpdated = new Date().getTime();
