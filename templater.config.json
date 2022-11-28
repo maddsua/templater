@@ -1,14 +1,11 @@
 {
-	"files": [
-		{
-			"from": "/test/source.htm",
-			"to": "/test/public.html"
-		}
-	],
-	"sourceDir": "/test/src/",
-	"publicRoot": "/test/public/",
+	"sourceDir": "/test_src",
+	"publicRoot": "/test_public",
+	"trimPublicRoot": true,
 
 	"data": {
-		"vari1": "Text from var 1"
+		"doc_header_text": "Page header",
+		"first_paragraph": "Lorem ipsum blah blah blah...",
+		"insert_doc": "$file=/test_include/block.html"
 	}
 }
