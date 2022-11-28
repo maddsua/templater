@@ -12,10 +12,10 @@
 
 import fs from 'fs';
 
-/*	/\{\{\s[\_A-Za-zА-Яа-яІіЇїҐґЄє]{1}[\_A-Za-zА-Яа-яІіЇїҐґЄє0-9]{0,}\s\}\}/	*/
+/*	/\{\{([\s]{0,}\|[\t]{0,})[\_A-Za-zА-Яа-яІіЇїҐґЄє]{1}[\_A-Za-zА-Яа-яІіЇїҐґЄє0-9]{0,}([\s]{0,}\|[\t]{0,})\}\}/g	*/
 const varNameSpace = '\\_A-Za-zА-Яа-яІіЇїҐґЄє0-9';
 const regexes = {
-	template_var: new RegExp(`\\{\\{\\s[${varNameSpace}]{1}[${varNameSpace}]{0,}\\s\\}\\}`, 'g'),
+	template_var: new RegExp(`\\{\\{([\\s]{0,}\|[\\t]{0,})[${varNameSpace}]{1}[${varNameSpace}]{0,}([\\s]{0,}\|[\\t]{0,})\\}\\}`, 'g'),
 	variable: new RegExp(`[${varNameSpace}]{1}[${varNameSpace}]{0,}`, 'g'),
 	var_file: /^\$file\=/,
 	inputFile: /^.*\.htm(l?)$/,
@@ -23,6 +23,28 @@ const regexes = {
 	dirSlashes: /(\/\/)|(\\\\)|(\\)/g
 }
 
+const colorText = (text, color, style) => {
+	const table = {
+		black: '\x1b[30m',
+		red: '\x1b[31m',
+		green: '\x1b[32m',
+		yellow: '\x1b[33m',
+		blue: '\x1b[34m',
+		magenta: '\x1b[35m',
+		cyan: '\x1b[36m',
+		white: '\x1b[37m'
+	};
+	const styles = {
+		bright: '\x1b[1m',
+		dim: '\x1b[2m',
+		underscore: '\x1b[4m',
+		blink: '\x1b[5m',
+		reverse: '\x1b[7m',
+		hidden: '\x1b[8m'
+	};
+
+	return (table[color] || table.white) + (styles[style] || '') + text + '\x1b[0m';
+};
 
 const findAllFiles = (searchDir) => {
 
@@ -30,7 +52,7 @@ const findAllFiles = (searchDir) => {
 
 	const dir_search = () => {	
 		if (!fs.existsSync(searchDir)) {
-			console.error(`Directory '${searchDir}' does not exist`);
+			console.error(colorText(`Directory '${searchDir}' does not exist`, 'red', 'reverse'));
 			return;
 		}
 
@@ -65,6 +87,8 @@ const normalizePath = (path) => {
 
 	return temp;
 };
+
+//console.log(colorText('welcome', 'red', 'reverse'))
 
 
 //	start arguments
@@ -154,7 +178,7 @@ const addNestedPath = (path) => {
 			});
 		}
 
-		if (!sourseFiles.length) console.warn('No source files found');
+		if (!sourseFiles.length) console.error(colorText('No source files found', 'red', 'bright'));
 
 		// process the templates
 
@@ -182,10 +206,10 @@ const addNestedPath = (path) => {
 								dataValue = fs.readFileSync(addNestedPath(insertFilePath), {encoding: 'utf8'}).toString();
 							} catch (error) {
 								dataValue = '';
-								console.warn(`Included file '${insertFilePath}' not found`);
+								console.warn(colorText(`Included file '${insertFilePath}' not found`, 'yellow'));
 							}
 						}
-					}
+					} else console.warn(colorText(`Variable ${varname} not found`, 'yellow'));
 
 				//	insert text to html document
 				tempHtml = tempHtml.replace(new RegExp(tempVar), dataValue);
@@ -221,10 +245,16 @@ const addNestedPath = (path) => {
 		sourseFiles.forEach(filepath => {
 			const result = compileTemplateFile(filepath.from, filepath.to);
 	
-			if (!result) console.log(`Processed '${filepath.from}'`);
-			else console.error(result);
+			if (!result) console.log(colorText(`Processed '${filepath.from}'`, 'green', 'bright'));
+			else console.error(colorText(result, 'red', 'reverse'));
 	
 			if (watchMode) {
+
+				//	don't add a watcher to a file that will be watched by directory
+				if (watchDirectory) {
+					if (filepath?.from?.includes(watchDirectory)) return;
+				}
+
 				let sourceUpdated = new Date().getTime();
 				const watchdog = fs.watch(filepath.from, (eventType, filename) => {
 	
@@ -237,7 +267,7 @@ const addNestedPath = (path) => {
 						compileTemplateFile(filepath.from, filepath.to);
 	
 					} else {
-						console.log(`File '${filename}' was renamed or moved`);
+						console.warn(`File '${filename}' was renamed or moved`);
 						watchdog.close();
 					}
 				});
@@ -249,7 +279,7 @@ const addNestedPath = (path) => {
 	coreFunction();
 
 	if (watchMode) {
-		console.log('Waiting for file changes...');
+		console.log('\r\n', colorText(' Waiting for source changes... ', 'blue', 'reverse'))
 
 		//	watch config changes
 		let configUpdated = new Date().getTime();
@@ -286,10 +316,10 @@ const addNestedPath = (path) => {
 				srcdirUpdated = now;
 	
 				sourcesWatchdogs.forEach((watchdog) => watchdog.close());
-				console.log('Source directory updated');
+			//	console.log('Source directory updated');
 				coreFunction();
 			});
 		}
-	}
+	} else console.log('\r\n', colorText(' Template build done ', 'green', 'reverse'));
 
 })();
