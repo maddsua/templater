@@ -15,7 +15,7 @@ Converts html template:
 </div>
 ```
 
-... to html page and trims 'public root' path left from VS Code's IntelliSence:
+... to a html page (also trims 'public root' path left from VS Code's IntelliSence):
 ```
 <h1>Page header</h1>
 <p>Lorem ipsum blah blah blah...</p>
