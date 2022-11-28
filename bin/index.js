@@ -23,6 +23,8 @@ const regexes = {
 	dirSlashes: /(\/\/)|(\\\\)|(\\)/g
 }
 
+const fsWatch_evIntv = 50;
+
 const colorText = (text, color, style) => {
 	const table = {
 		black: '\x1b[30m',
@@ -88,7 +90,6 @@ const normalizePath = (path) => {
 	return temp;
 };
 
-//console.log(colorText('welcome', 'red', 'reverse'))
 
 
 //	start arguments
@@ -108,7 +109,7 @@ const configPath = ((argpattern) => {
 const addNestedPath = (path) => {
 	if (typeof differentRootDir === 'string') return normalizePath(`${differentRootDir}/${path}`);
 	return normalizePath(path);
-}
+};
 
 //	the main()
 (() => {
@@ -254,28 +255,19 @@ const addNestedPath = (path) => {
 				//	don't add a watcher to a file that will be watched by directory
 				if (watchDirectory && filepath?.from?.includes(watchDirectory)) return;
 
-				fs.watchFile(filepath.from, {persistent: true, interval: watchUpdateInterval}, () => {
-					const rebuildResult = compileTemplateFile(filepath.from, filepath.to);
+				let changeHandler = 0;
+				const watchdog = fs.watch(filepath.from, () => {
+					clearTimeout(changeHandler);
+					changeHandler = setTimeout(() => {
+						const rebuildResult = compileTemplateFile(filepath.from, filepath.to);
 						if (!rebuildResult) console.log(colorText(`Rebuilt '${filepath.from}'`, 'green', 'bright'));
 						else console.error(colorText(result, 'red', 'reverse'));
+					}, fsWatch_evIntv);
 				});
-				sourcesWatched.push(filepath.from);
+				sourcesWatched.push(watchdog);
 			}
 		});
-		
-		//	wach on source dir changes
-		if (watchDirectory) {
-			let srcdirUpdated = new Date().getTime();
-			srcdirWatchDog = fs.watch(watchDirectory, {recursive: true}, () => {
 	
-				const now = new Date().getTime();
-				if (now < (srcdirUpdated + watchUpdateInterval)) return;
-				srcdirUpdated = now;
-	
-				sourcesWatched.forEach((watchdog) => watchdog.close());
-				coreFunction();
-			});
-		}
 	};
 
 	coreFunction();
@@ -284,19 +276,36 @@ const addNestedPath = (path) => {
 		console.log('\r\n', colorText(' Waiting for source changes... ', 'blue', 'reverse'))
 
 		//	watch config changes
-		fs.watchFile(configPath, {persistent: true, interval: watchUpdateInterval}, () => {
+		let changeHandler = 0;
+		fs.watch(configPath, () => {
+			clearTimeout(changeHandler);
+			changeHandler = setTimeout(() => {
 
-			sourcesWatched.forEach((srcFilePath) => fs.unwatchFile(srcFilePath));
-			srcdirWatchDog.close();
-			
-			const configReloadResult = loadConfig();
-			if (configReloadResult) {
-				console.error(colorText(configReloadResult, 'red'));
-				return;
-			}
-			console.log('Config reloaded');
-			coreFunction();
+				sourcesWatched.forEach((watchdog) => watchdog.close());
+				srcdirWatchDog.close();
+				
+				const configReloadResult = loadConfig();
+					if (configReloadResult) {
+						console.error(colorText(configReloadResult, 'red'));
+						return;
+					}
+				console.log('Config reloaded');
+				coreFunction();
+
+			}, fsWatch_evIntv);
 		});
+
+		//	wach on source dir changes
+		if (watchDirectory) {
+			let dirUpdateHandler = 0;
+			srcdirWatchDog = fs.watch(watchDirectory, {recursive: true}, () => {
+				clearTimeout(dirUpdateHandler);
+				dirUpdateHandler = setTimeout(() => {
+					sourcesWatched.forEach((watchdog) => watchdog.close());
+					coreFunction();
+				}, fsWatch_evIntv);
+			});
+		}
 
 	} else console.log('\r\n', colorText(' Template build done ', 'green', 'reverse'));
 
