@@ -1,0 +1,3 @@
+# .npmignore
+publish.cmd
+test/
