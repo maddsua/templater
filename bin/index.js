@@ -68,6 +68,7 @@ const normalizePath = (path) => {
 	}
 
 	const trimPubRoot = config['trimPublicRoot'];
+	const watchUpdateInterval = config['watchUpdateInterval'] || 100;
 
 	const variables = config['data'];
 	if (typeof variables !== 'object') {
@@ -149,37 +150,48 @@ const normalizePath = (path) => {
 	};
 
 	const processFileTemplate = (srcpath, destpath) => {
+
 		let htmltext = '';
 		try {
 			htmltext = fs.readFileSync(srcpath, {encoding: 'utf8'}).toString();
 		} catch (error) {
-			console.error(`Can't load template file ${srcpath}, error: ${error}`);
-			return false;
+			return `Can't load template file ${srcpath}, error: ${error}`;
 		}
 
 		const destDir = separatePath(destpath).dir;
-	
-		if (!fs.existsSync(destDir)) fs.mkdirSync(destDir, { recursive: true });
+			if (!fs.existsSync(destDir)) fs.mkdirSync(destDir, { recursive: true });
 
-		fs.writeFileSync(destpath, processTemplate(htmltext), {encoding: 'utf8'});
-		console.log(`Processed '${srcpath}'`);
+		try {
+			fs.writeFileSync(destpath, processTemplate(htmltext), {encoding: 'utf8'});
+		} catch (error) {
+			return `Can't write to ${destpath}, error: ${error}`;
+		}
 
-		return true;
+		return false;
 	};
 
 	inputs.forEach(filepath => {
-		processFileTemplate(filepath.from, filepath.to);
+		const result = processFileTemplate(filepath.from, filepath.to);
+
+		if (!result) console.log(`Processed '${filepath.from}'`);
+		else console.warn(result);
 
 		if (watchMode) {
+			let updated = new Date().getTime();
 			const watchdog = fs.watch(filepath.from, (eventType, filename) => {
-				console.log('\r\n');
+
+				const now = new Date().getTime();
+				if (now < (updated + watchUpdateInterval)) return;
+				updated = now;
+
 				if (eventType === 'change') {
 					console.log(`Rebuilding '${filename}'`);
 					processFileTemplate(filepath.from, filepath.to);
-					return;
+
+				} else {
+					console.log(`File '${filename}' was renamed or moved`);
+					watchdog.close();
 				}
-				console.log(`File '${filename}' was renamed or moved`);
-				watchdog.close();
 			});
 		}
 	});
