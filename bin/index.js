@@ -11,9 +11,6 @@ const regexes = {
 	dirSlashes: /(\/\/)|(\\\\)|(\\)/g
 }
 
-const configPath = './templater.config.json';
-
-const watchMode = process.argv.find((arg) => (arg === '--watch' || arg === '-w')) ? true : false;
 
 const findAllFiles = (searchDir) => {
 
@@ -34,7 +31,6 @@ const findAllFiles = (searchDir) => {
 	
 	return results;
 };
-
 const separatePath = (path) => {
 
 	const pathDir = path.match(regexes.directory)[0] || './';
@@ -45,7 +41,6 @@ const separatePath = (path) => {
 		file: pathFile
 	}
 };
-
 const normalizePath = (path) => {
 	let temp = path.replace(regexes.dirSlashes, '/');
 
@@ -54,6 +49,17 @@ const normalizePath = (path) => {
 
 	return temp;
 };
+
+
+//	start arguments
+const watchMode = process.argv.find((arg) => (arg === '--watch' || arg === '-w')) ? true : false;
+
+const configPath = ((argpattern) => {
+	const argument = process.argv.find((arg) => arg.startsWith(argpattern));
+	if (typeof argument === 'string') return normalizePath(argument.substring(argpattern.length));
+	return false;
+})('--config=') || './templater.config.json';
+
 
 //	the main()
 (() => {
@@ -109,7 +115,7 @@ const normalizePath = (path) => {
 	}
 
 
-	// process templates
+	// process the templates
 
 	const processTemplate = (templateText) => {
 		//	the c language habits, completely unnecessary here

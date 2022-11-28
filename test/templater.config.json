@@ -1,11 +1,11 @@
 {
-	"sourceDir": "/test_src",
-	"publicRoot": "/test_public",
+	"sourceDir": "/test/src",
+	"publicRoot": "/test/public",
 	"trimPublicRoot": true,
 
 	"data": {
 		"doc_header_text": "Page header",
 		"first_paragraph": "Lorem ipsum blah blah blah...",
-		"insert_doc": "$file=/test_include/block.html"
+		"insert_doc": "$file=/test/include/block.html"
 	}
 }

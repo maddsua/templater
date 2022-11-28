@@ -12,8 +12,8 @@
 		"url": "git+https://github.com/maddsua/templater.git"
 	},
 	"scripts": {
-		"test": "node ./bin/index.js",
-		"watch": "node ./bin/index.js --watch"
+		"test": "node ./bin/index.js --config=test/templater.config.json",
+		"watch": "node ./bin/index.js --watch --config=test/templater.config.json"
 	},
 	"keywords": [
 		"template",
