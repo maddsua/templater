@@ -66,12 +66,21 @@ const normalizePath = (path) => {
 //	start arguments
 const watchMode = process.argv.find((arg) => (arg === '--watch' || arg === '-w')) ? true : false;
 
+let differentRootDir = false;
 const configPath = ((argpattern) => {
 	const argument = process.argv.find((arg) => arg.startsWith(argpattern));
-	if (typeof argument === 'string') return normalizePath(argument.substring(argpattern.length));
+	if (typeof argument === 'string') {
+		const newCfgPath = normalizePath(argument.substring(argpattern.length))
+		differentRootDir = separatePath(newCfgPath).dir;
+		return newCfgPath;
+	}
 	return false;
 })('--config=') || './templater.config.json';
 
+const addNestedPath = (path) => {
+	if (typeof differentRootDir === 'string') return normalizePath(`${differentRootDir}/${path}`);
+	return path;
+}
 
 //	the main()
 (() => {
@@ -110,10 +119,8 @@ const configPath = ((argpattern) => {
 
 		//	deal with input files
 		const files = config['files'];
-		const sourceDir = config['sourceDir'];
-
-		let publicRoot = config['publicRoot'];
-			if (typeof publicRoot !== 'string') publicRoot = false;
+		let sourceDir = config['sourceDir'];
+		const publicRoot = config['publicRoot'];
 
 		let sourseFiles = [];
 
@@ -121,25 +128,27 @@ const configPath = ((argpattern) => {
 		if (typeof files?.length === 'number') {
 			files.forEach((file) => {
 				if (typeof file.from === 'string' && typeof file.to === 'string') sourseFiles.push({
-					from: normalizePath(file.from),
-					to: normalizePath(file.to)
+					from: addNestedPath(file.from),
+					to: addNestedPath(file.to)
 				});
 			});
 		}
 
 		//	add files, that were found in src directories
 		if (typeof sourceDir === 'string' && publicRoot) {
-			findAllFiles(normalizePath(sourceDir)).forEach((filepath) => {
+			sourceDir = addNestedPath(sourceDir);
+			findAllFiles(sourceDir).forEach((filepath) => {
 				const file_from = normalizePath(filepath);
-				const file_to = normalizePath(`${publicRoot}/${separatePath(file_from).file}`);
+				const file_to = normalizePath(`${addNestedPath(publicRoot)}/${separatePath(file_from).file}`);
 
 				if (!sourseFiles.find((item) => (item.from === file_from && item.to === file_to))) {
 					sourseFiles.push({from: file_from, to: file_to});
-					watchDirectory = normalizePath(sourceDir);
+					watchDirectory = sourceDir;
 				}
 			});
 		}
 
+		if (!sourseFiles.length) console.warn('No source files found');
 
 		// process the templates
 
@@ -164,9 +173,10 @@ const configPath = ((argpattern) => {
 						if (regexes.var_file.test(dataValue)) {
 							const insertFilePath = normalizePath(dataValue.replace(regexes.var_file, ''));
 							try {
-								dataValue = fs.readFileSync(insertFilePath, {encoding: 'utf8'}).toString();
+								dataValue = fs.readFileSync(addNestedPath(insertFilePath), {encoding: 'utf8'}).toString();
 							} catch (error) {
 								dataValue = '';
+								console.warn(`Included file '${insertFilePath}' not found`);
 							}
 						}
 					}

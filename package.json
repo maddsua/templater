@@ -1,6 +1,6 @@
 {
 	"name": "@maddsua/templater",
-	"version": "1.0.3",
+	"version": "1.0.4",
 	"description": "Builds HTML pages from templates",
 	"type": "module",
 	"bin": {
