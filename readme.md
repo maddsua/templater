@@ -1,5 +1,15 @@
 # Builds HTML pages from templates
 
+## Whats that?
+
+This little build script will come handy for creating single-page (or a few more) sites without use of frameworks and other heavy tools.
+
+Let's say, you have to place a company's phone number in 15 places on a page. If you pick a custom script or, let's say, Vue as a solution - well, that's your choise. But I would prefer a simple tool that puts a text string where it needs to be.
+
+**Then, why not php?**
+
+ \- Hehe \[visibly nervous\]. Well yes, Netlify allows you to use PHP as a build tool, so that it could be used to put that text in place. The thing is, I don't like PHP's syntax and it would be like driving a nail with an anvil
+
 ## So, basically it does two things:
 
 Converts html template:
