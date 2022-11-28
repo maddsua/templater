@@ -32,7 +32,7 @@ Converts html template:
 </div>
 ```
 
-## Config File example:
+## Config file example:
 
 	templater.config.json
 ```
