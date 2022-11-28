@@ -230,7 +230,9 @@ const addNestedPath = (path) => {
 			} catch (error) {
 				return `Can't load template file ${srcpath}, error: ${error}`;
 			}
-
+			
+			if (htmltext.length < 10) return `Source file read error or file too short, '${srcpath}'`;
+			
 			const destDir = separatePath(destpath).dir;
 				if (!fs.existsSync(destDir)) fs.mkdirSync(destDir, { recursive: true });
 
