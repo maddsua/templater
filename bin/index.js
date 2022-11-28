@@ -132,7 +132,7 @@ const addNestedPath = (path) => {
 		}
 
 	const watchUpdateInterval = config['watchUpdateInterval'] || 500;
-	let srcdirWatchDog = false;
+	let srcdirWatchDog = 0;
 	let watchDirectory = false;
 
 	let sourcesWatched = [];
@@ -273,36 +273,43 @@ const addNestedPath = (path) => {
 	coreFunction();
 
 	if (watchMode) {
-		console.log('\r\n', colorText(' Waiting for source changes... ', 'blue', 'reverse'))
+		console.log('\r\n', colorText(' Waiting for source changes... ', 'blue', 'reverse'));
+
+		let updates = false;
 
 		//	watch config changes
 		let changeHandler = 0;
 		fs.watch(configPath, () => {
+			if (updates) return;
 			clearTimeout(changeHandler);
 			changeHandler = setTimeout(() => {
+				updates = true;
 
 				sourcesWatched.forEach((watchdog) => watchdog.close());
-				srcdirWatchDog.close();
-				
+				//if (watchDirectory) srcdirWatchDog.close();
 				const configReloadResult = loadConfig();
-					if (configReloadResult) {
-						console.error(colorText(configReloadResult, 'red'));
-						return;
-					}
-				console.log('Config reloaded');
-				coreFunction();
+				if (!configReloadResult) {
+					console.log('Config reloaded');
+					coreFunction();
+				} else console.error(colorText(configReloadResult, 'red'));
 
+				updates = false;
 			}, fsWatch_evIntv);
 		});
 
 		//	wach on source dir changes
 		if (watchDirectory) {
+			if (updates) return;
 			let dirUpdateHandler = 0;
 			srcdirWatchDog = fs.watch(watchDirectory, {recursive: true}, () => {
 				clearTimeout(dirUpdateHandler);
 				dirUpdateHandler = setTimeout(() => {
+					updates = true;
+
 					sourcesWatched.forEach((watchdog) => watchdog.close());
 					coreFunction();
+
+					updates = false;
 				}, fsWatch_evIntv);
 			});
 		}
