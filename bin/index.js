@@ -244,9 +244,8 @@ const addNestedPath = (path) => {
 
 		sourseFiles.forEach(filepath => {
 			const result = compileTemplateFile(filepath.from, filepath.to);
-	
-			if (!result) console.log(colorText(`Processed '${filepath.from}'`, 'green', 'bright'));
-			else console.error(colorText(result, 'red', 'reverse'));
+				if (!result) console.log(colorText(`Processed '${filepath.from}'`, 'green', 'bright'));
+				else console.error(colorText(result, 'red', 'reverse'));
 	
 			if (watchMode) {
 
@@ -263,8 +262,9 @@ const addNestedPath = (path) => {
 					sourceUpdated = now;
 	
 					if (eventType === 'change') {
-						console.log(`Rebuilding '${filename}'`);
-						compileTemplateFile(filepath.from, filepath.to);
+						const rebuildResult = compileTemplateFile(filepath.from, filepath.to);
+							if (!rebuildResult) console.log(colorText(`Rebuilt '${filepath.from}'`, 'green', 'bright'));
+							else console.error(colorText(result, 'red', 'reverse'));
 	
 					} else {
 						console.warn(`File '${filename}' was renamed or moved`);
