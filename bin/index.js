@@ -130,10 +130,11 @@ const addNestedPath = (path) => {
 			return;
 		}
 
-	const watchUpdateInterval = config['watchUpdateInterval'] || 100;
+	const watchUpdateInterval = config['watchUpdateInterval'] || 500;
+	let srcdirWatchDog = false;
 	let watchDirectory = false;
 
-	let sourcesWatchdogs = [];
+	let sourcesWatched = [];
 
 	const coreFunction = () => {
 
@@ -248,32 +249,31 @@ const addNestedPath = (path) => {
 				else console.error(colorText(result, 'red', 'reverse'));
 	
 			if (watchMode) {
-
 				//	don't add a watcher to a file that will be watched by directory
-				if (watchDirectory) {
-					if (filepath?.from?.includes(watchDirectory)) return;
-				}
+				if (watchDirectory && filepath?.from?.includes(watchDirectory)) return;
 
-				let sourceUpdated = new Date().getTime();
-				const watchdog = fs.watch(filepath.from, (eventType, filename) => {
-	
-					const now = new Date().getTime();
-					if (now < (sourceUpdated + watchUpdateInterval)) return;
-					sourceUpdated = now;
-	
-					if (eventType === 'change') {
-						const rebuildResult = compileTemplateFile(filepath.from, filepath.to);
-							if (!rebuildResult) console.log(colorText(`Rebuilt '${filepath.from}'`, 'green', 'bright'));
-							else console.error(colorText(result, 'red', 'reverse'));
-	
-					} else {
-						console.warn(`File '${filename}' was renamed or moved`);
-						watchdog.close();
-					}
+				fs.watchFile(filepath.from, {persistent: true, interval: watchUpdateInterval}, () => {
+					const rebuildResult = compileTemplateFile(filepath.from, filepath.to);
+						if (!rebuildResult) console.log(colorText(`Rebuilt '${filepath.from}'`, 'green', 'bright'));
+						else console.error(colorText(result, 'red', 'reverse'));
 				});
-				sourcesWatchdogs.push(watchdog);
+				sourcesWatched.push(filepath.from);
 			}
 		});
+		
+		//	wach on source dir changes
+		if (watchDirectory) {
+			let srcdirUpdated = new Date().getTime();
+			srcdirWatchDog = fs.watch(watchDirectory, {recursive: true}, () => {
+	
+				const now = new Date().getTime();
+				if (now < (srcdirUpdated + watchUpdateInterval)) return;
+				srcdirUpdated = now;
+	
+				sourcesWatched.forEach((watchdog) => watchdog.close());
+				coreFunction();
+			});
+		}
 	};
 
 	coreFunction();
@@ -282,44 +282,20 @@ const addNestedPath = (path) => {
 		console.log('\r\n', colorText(' Waiting for source changes... ', 'blue', 'reverse'))
 
 		//	watch config changes
-		let configUpdated = new Date().getTime();
-		const configWatchDog = fs.watch(configPath, (eventType) => {
+		fs.watchFile(configPath, {persistent: true, interval: watchUpdateInterval}, () => {
 
-			const now = new Date().getTime();
-			if (now < (configUpdated + watchUpdateInterval)) return;
-			configUpdated = now;
-
-			sourcesWatchdogs.forEach((watchdog) => watchdog.close());
-			console.log('Config reloaded');
-
-			if (eventType === 'change') {
-
-				const configReloadResult = loadConfig();
-					if (configReloadResult) {
-						console.error(configReloadResult);
-					}
-					coreFunction();
-
-			} else {
-				console.error('Config file was lost');
-				configWatchDog.close();
+			sourcesWatched.forEach((srcFilePath) => fs.unwatchFile(srcFilePath));
+			srcdirWatchDog.close();
+			
+			const configReloadResult = loadConfig();
+			if (configReloadResult) {
+				console.error(colorText(configReloadResult, 'red'));
+				return;
 			}
+			console.log('Config reloaded');
+			coreFunction();
 		});
 
-		//	wach source dir changes
-		if (watchDirectory) {
-			let srcdirUpdated = new Date().getTime();
-			const srcdirWatchDog = fs.watch(watchDirectory, () => {
-	
-				const now = new Date().getTime();
-				if (now < (srcdirUpdated + watchUpdateInterval)) return;
-				srcdirUpdated = now;
-	
-				sourcesWatchdogs.forEach((watchdog) => watchdog.close());
-			//	console.log('Source directory updated');
-				coreFunction();
-			});
-		}
 	} else console.log('\r\n', colorText(' Template build done ', 'green', 'reverse'));
 
 })();
