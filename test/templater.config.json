@@ -7,6 +7,8 @@
 		"doc_header_text": "Page header",
 		"first_paragraph": "Lorem ipsum blah blah blah...",
 		"insert_doc": "$file=/test/include/block.html",
-		"image_alt_text": "A picture of a cat"
+		"image_alt_text": "A picture of a cat or two",
+		"another_text_line": "Ще одна текстова строка",
+		"змінна_українською": "🇺🇦"
 	}
 }
