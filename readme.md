@@ -48,3 +48,9 @@ Converts html template:
 	}
 }
 ```
+
+## Start arguments
+
+`--config=path` : Specifies the config file
+
+`--watch` : Does the same as for typescript or sass (ok, it's 'rebuild on change')

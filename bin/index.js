@@ -89,12 +89,12 @@ const configPath = ((argpattern) => {
 	let publicRoot = config['publicRoot'];
 		if (typeof publicRoot !== 'string') publicRoot = false;
 
-	let inputs = [];
+	let sourseFiles = [];
 
 	//	add specified files
 	if (typeof files?.length === 'number') {
 		files.forEach((file) => {
-			if (typeof file.from === 'string' && typeof file.to === 'string') inputs.push({
+			if (typeof file.from === 'string' && typeof file.to === 'string') sourseFiles.push({
 				from: normalizePath(file.from),
 				to: normalizePath(file.to)
 			});
@@ -107,7 +107,7 @@ const configPath = ((argpattern) => {
 			const file_from = normalizePath(filepath);
 			const file_to = normalizePath(`${publicRoot}/${separatePath(file_from).file}`);
 
-			if (!inputs.find((item) => (item.from === file_from && item.to === file_to))) inputs.push({
+			if (!sourseFiles.find((item) => (item.from === file_from && item.to === file_to))) sourseFiles.push({
 				from: file_from,
 				to: file_to
 			});
@@ -117,7 +117,7 @@ const configPath = ((argpattern) => {
 
 	// process the templates
 
-	const processTemplate = (templateText) => {
+	const buildTemplate = (templateText) => {
 		//	the c language habits, completely unnecessary here
 		let tempHtml = templateText;
 
@@ -155,7 +155,7 @@ const configPath = ((argpattern) => {
 		return tempHtml;
 	};
 
-	const processFileTemplate = (srcpath, destpath) => {
+	const compileTemplateFile = (srcpath, destpath) => {
 
 		let htmltext = '';
 		try {
@@ -168,7 +168,7 @@ const configPath = ((argpattern) => {
 			if (!fs.existsSync(destDir)) fs.mkdirSync(destDir, { recursive: true });
 
 		try {
-			fs.writeFileSync(destpath, processTemplate(htmltext), {encoding: 'utf8'});
+			fs.writeFileSync(destpath, buildTemplate(htmltext), {encoding: 'utf8'});
 		} catch (error) {
 			return `Can't write to ${destpath}, error: ${error}`;
 		}
@@ -176,8 +176,8 @@ const configPath = ((argpattern) => {
 		return false;
 	};
 
-	inputs.forEach(filepath => {
-		const result = processFileTemplate(filepath.from, filepath.to);
+	sourseFiles.forEach(filepath => {
+		const result = compileTemplateFile(filepath.from, filepath.to);
 
 		if (!result) console.log(`Processed '${filepath.from}'`);
 		else console.warn(result);
@@ -192,7 +192,7 @@ const configPath = ((argpattern) => {
 
 				if (eventType === 'change') {
 					console.log(`Rebuilding '${filename}'`);
-					processFileTemplate(filepath.from, filepath.to);
+					compileTemplateFile(filepath.from, filepath.to);
 
 				} else {
 					console.log(`File '${filename}' was renamed or moved`);
