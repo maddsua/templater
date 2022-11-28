@@ -29,7 +29,10 @@ const findAllFiles = (searchDir) => {
 	let results = [];
 
 	const dir_search = () => {	
-		if (!fs.existsSync(searchDir)) return;
+		if (!fs.existsSync(searchDir)) {
+			console.error(`Directory '${searchDir}' does not exist`);
+			return;
+		}
 
 		fs.readdirSync(searchDir).forEach((file) => {
 			const filename = `${searchDir}/${file}`;
@@ -56,6 +59,7 @@ const separatePath = (path) => {
 const normalizePath = (path) => {
 	let temp = path.replace(regexes.dirSlashes, '/');
 
+	if (temp[0] === '.') temp = temp.substring(1);
 	if (temp[0] === '/') temp = temp.substring(1);
 	if (temp.slice(-1) === '/') temp = temp.slice(0, -1); 
 
@@ -79,7 +83,7 @@ const configPath = ((argpattern) => {
 
 const addNestedPath = (path) => {
 	if (typeof differentRootDir === 'string') return normalizePath(`${differentRootDir}/${path}`);
-	return path;
+	return normalizePath(path);
 }
 
 //	the main()
@@ -137,7 +141,9 @@ const addNestedPath = (path) => {
 		//	add files, that were found in src directories
 		if (typeof sourceDir === 'string' && publicRoot) {
 			sourceDir = addNestedPath(sourceDir);
+
 			findAllFiles(sourceDir).forEach((filepath) => {
+
 				const file_from = normalizePath(filepath);
 				const file_to = normalizePath(`${addNestedPath(publicRoot)}/${separatePath(file_from).file}`);
 
