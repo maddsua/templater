@@ -24,7 +24,6 @@ const regexes = {
 }
 
 const fsWatch_evHold = 50;
-const fsWatch_evCheck = 250;
 
 const colorText = (text, color, style) => {
 	const table = {
@@ -132,11 +131,11 @@ const addNestedPath = (path) => {
 			return;
 		}
 
-	const watchUpdateInterval = config['watchUpdateInterval'] || 500;
-	let srcdirWatchDog = 0;
-	let watchDirectory = false;
+		
+	let sourcesWatchdogs = [];
 
-	let sourcesWatched = [];
+	let watchDirectory = false;
+	let srcDirWatchDog = false;
 
 	const coreFunction = () => {
 
@@ -165,20 +164,26 @@ const addNestedPath = (path) => {
 			});
 		}
 
+		const filterNewFiles = (searchDir) => {
+			let result = [];
+
+			searchDir.forEach((filepath) => {
+				const file_from = normalizePath(filepath);
+				const file_to = normalizePath(`${addNestedPath(publicRoot)}/${separatePath(file_from).file}`);
+				if (!sourseFiles.find((item) => (item.from === file_from && item.to === file_to))) {
+					result.push({from: file_from, to: file_to});
+				}
+			});
+
+			return result;
+		}
+
 		//	add files, that were found in src directories
 		if (typeof sourceDir === 'string' && publicRoot) {
 			sourceDir = addNestedPath(sourceDir);
+			if (watchMode) watchDirectory = sourceDir;
 
-			findAllFiles(sourceDir).forEach((filepath) => {
-
-				const file_from = normalizePath(filepath);
-				const file_to = normalizePath(`${addNestedPath(publicRoot)}/${separatePath(file_from).file}`);
-
-				if (!sourseFiles.find((item) => (item.from === file_from && item.to === file_to))) {
-					sourseFiles.push({from: file_from, to: file_to});
-					watchDirectory = sourceDir;
-				}
-			});
+			sourseFiles = sourseFiles.concat(filterNewFiles(findAllFiles(sourceDir)));
 		}
 
 		if (!sourseFiles.length) console.error(colorText('No source files found', 'red', 'bright'));
@@ -247,28 +252,40 @@ const addNestedPath = (path) => {
 			return false;
 		};
 
-		sourseFiles.forEach(filepath => {
-			const result = compileTemplateFile(filepath.from, filepath.to);
-				if (!result) console.log(colorText(`Processed '${filepath.from}'`, 'green', 'bright'));
-				else console.error(colorText(result, 'red', 'reverse'));
+		const templateFileHandler = (pathObj) => {
+			const result = compileTemplateFile(pathObj.from, pathObj.to);
+				if (!result) console.log(colorText(`Processed '${pathObj.from}'`, 'green'));
+				else {
+					console.error(colorText(result, 'red', 'reverse'));
+					return;
+				}
 	
 			if (watchMode) {
-				//	don't add a watcher to a file that will be watched by directory
-				if (watchDirectory && filepath?.from?.includes(watchDirectory)) return;
-
 				let changeHandler = 0;
-				const watchdog = fs.watch(filepath.from, () => {
+				const watchdog = fs.watch(pathObj.from, () => {
 					clearTimeout(changeHandler);
 					changeHandler = setTimeout(() => {
-						const rebuildResult = compileTemplateFile(filepath.from, filepath.to);
-						if (!rebuildResult) console.log(colorText(`Rebuilt '${filepath.from}'`, 'green', 'bright'));
-						else console.error(colorText(result, 'red', 'reverse'));
+						const rebuildResult = compileTemplateFile(pathObj.from, pathObj.to);
+						if (!rebuildResult) console.log(colorText(`Rebuilt '${pathObj.from}'`, 'green'));
+						else console.error(colorText(rebuildResult, 'red'));
 					}, fsWatch_evHold);
 				});
-				sourcesWatched.push(watchdog);
+				sourcesWatchdogs.push(watchdog);
 			}
-		});
-	
+		};
+
+		sourseFiles.forEach(item => templateFileHandler(item));
+
+		if (watchDirectory) {
+			srcDirWatchDog = fs.watch(watchDirectory, {recursive: true}, (eventType, filename) => {
+				if (eventType === 'change') return;
+
+				filterNewFiles([normalizePath(`${watchDirectory}/${filename}`)]).forEach((newFile) => {
+					sourseFiles.push(newFile);
+					templateFileHandler(newFile)
+				});
+			});
+		}
 	};
 
 	coreFunction();
@@ -276,36 +293,22 @@ const addNestedPath = (path) => {
 	if (watchMode) {
 		console.log('\r\n', colorText(' Waiting for source changes... ', 'blue', 'reverse'));
 
-		let fileChangeEvents = {
-			config: false,
-			dir: false
-		};
+		let configChangeHandler = 0;
+		fs.watch(configPath, () => {
+			clearTimeout(configChangeHandler);
+			configChangeHandler = setTimeout(() => {
 
-		setInterval(() => {
-			if (!fileChangeEvents.config && !fileChangeEvents.dir) return;
-
-			sourcesWatched.forEach((watchdog) => watchdog.close());
-
-			let configReloadResult = false;
-			if (fileChangeEvents.config) {
-				configReloadResult = loadConfig();
-				if (!configReloadResult) console.log('Config reloaded');
+				let configReloadResult = loadConfig();
+				if (!configReloadResult) {
+					srcDirWatchDog.close();
+					sourcesWatchdogs.forEach((watchdog) => watchdog.close());
+					console.log('Config reloaded');
+					coreFunction();
+				}
 				else console.error(colorText(configReloadResult, 'red'));
-			}
 
-			if (!configReloadResult || fileChangeEvents.dir) coreFunction();
-
-			fileChangeEvents.config = false;
-			fileChangeEvents.dir = false;
-		}, fsWatch_evCheck);
-
-		//	watch config changes
-		fs.watch(configPath, () => fileChangeEvents.config = true);
-
-		//	wach on source dir changes
-		if (watchDirectory) {
-			srcdirWatchDog = fs.watch(watchDirectory, {recursive: true}, () => fileChangeEvents.dir = true);
-		}
+			}, fsWatch_evHold);
+		});
 
 	} else console.log('\r\n', colorText(' Template build done ', 'green', 'reverse'));
 

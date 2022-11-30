@@ -1,19 +1,19 @@
 {
 	"name": "@maddsua/templater",
-	"version": "1.1.0",
+	"version": "1.1.1",
 	"description": "Builds HTML pages from templates",
 	"type": "module",
 	"bin": {
-		"tmr": "./bin/index.js",
-		"templater": "./bin/index.js"
+		"mtmp": "./bin/cli-tool.js",
+		"templater": "./bin/cli-tool.js"
 	},
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/maddsua/templater.git"
 	},
 	"scripts": {
-		"test": "node ./bin/index.js --config=test/templater.config.json",
-		"watch": "node ./bin/index.js --watch --config=test/templater.config.json"
+		"test": "node ./bin/cli-tool.js --config=test/templater.config.json",
+		"watch": "node ./bin/cli-tool.js --watch --config=test/templater.config.json"
 	},
 	"keywords": [
 		"template",
