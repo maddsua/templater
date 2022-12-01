@@ -235,10 +235,14 @@ const addNestedPath = (path) => {
 			try {
 				htmltext = fs.readFileSync(srcpath, {encoding: 'utf8'}).toString();
 			} catch (error) {
-				return `Can't load template file ${srcpath}, error: ${error}`;
+				console.error(colorText(`Can't load template file ${srcpath}, error: ${error}`, 'red', 'reverse'));
+				return false;
 			}
 			
-			if (htmltext.length < 10) return `Source file read error or file too short, '${srcpath}'`;
+			if (htmltext.length < 15) {
+				console.warn(`File '${srcpath}' is ${colorText('too short', 'yellow')}, more text is needed to be added`);
+				return true;
+			}
 			
 			const destDir = separatePath(destpath).dir;
 				if (!fs.existsSync(destDir)) fs.mkdirSync(destDir, { recursive: true });
@@ -246,19 +250,17 @@ const addNestedPath = (path) => {
 			try {
 				fs.writeFileSync(destpath, buildTemplate(htmltext), {encoding: 'utf8'});
 			} catch (error) {
-				return `Can't write to ${destpath}, error: ${error}`;
+				console.error(colorText(`Can't write to ${destpath}, error: ${error}`, 'red', 'reverse'));
+				return false;
 			}
 
-			return false;
+			return true;
 		};
 
 		const templateFileHandler = (pathObj) => {
 			const result = compileTemplateFile(pathObj.from, pathObj.to);
-				if (!result) console.log(colorText(`Processed '${pathObj.from}'`, 'green'));
-				else {
-					console.error(colorText(result, 'red', 'reverse'));
-					return;
-				}
+				if (result) console.log(colorText(`Processed '${pathObj.from}'`, 'green'));
+				else return;
 	
 			if (watchMode) {
 				let changeHandler = 0;
@@ -266,8 +268,7 @@ const addNestedPath = (path) => {
 					clearTimeout(changeHandler);
 					changeHandler = setTimeout(() => {
 						const rebuildResult = compileTemplateFile(pathObj.from, pathObj.to);
-						if (!rebuildResult) console.log(colorText(`Rebuilt '${pathObj.from}'`, 'green'));
-						else console.error(colorText(rebuildResult, 'red'));
+							if (rebuildResult) console.log(colorText(`Rebuilt '${pathObj.from}'`, 'green'));
 					}, fsWatch_evHold);
 				});
 				sourcesWatchdogs.push(watchdog);
@@ -282,7 +283,7 @@ const addNestedPath = (path) => {
 
 				filterNewFiles([normalizePath(`${watchDirectory}/${filename}`)]).forEach((newFile) => {
 					sourseFiles.push(newFile);
-					templateFileHandler(newFile)
+					templateFileHandler(newFile);
 				});
 			});
 		}
