@@ -12,11 +12,11 @@
 
 import fs from 'fs';
 
-/*	/\{\{([\s]{0,}\|[\t]{0,})[\_A-Za-zА-Яа-яІіЇїҐґЄє]{1}[\_A-Za-zА-Яа-яІіЇїҐґЄє0-9]{0,}([\s]{0,}\|[\t]{0,})\}\}/g	*/
+/*	/\{\{([\s]{0,}\|[\t]{0,})[\_A-Za-zА-Яа-яІіЇїҐґЄє0-9]{1,}([\s]{0,}\|[\t]{0,})\}\}/g	*/
 const varNameSpace = '\\_A-Za-zА-Яа-яІіЇїҐґЄє0-9';
 const regexes = {
-	template_var: new RegExp(`\\{\\{([\\s]{0,}\|[\\t]{0,})[${varNameSpace}]{1}[${varNameSpace}]{0,}([\\s]{0,}\|[\\t]{0,})\\}\\}`, 'g'),
-	variable: new RegExp(`[${varNameSpace}]{1}[${varNameSpace}]{0,}`, 'g'),
+	template_var: new RegExp(`\\{\\{([\\s]{0,}\|[\\t]{0,})[${varNameSpace}]{1,}([\\s]{0,}\|[\\t]{0,})\\}\\}`, 'g'),
+	variable: new RegExp(`[${varNameSpace}]{1,}`, 'g'),
 	var_file: /^\$file\=/,
 	inputFile: /^.*\.htm(l?)$/,
 	directory: /^.*\//,
@@ -217,6 +217,10 @@ const addNestedPath = (path) => {
 								console.warn(colorText(`Included file '${insertFilePath}' not found`, 'yellow'));
 							}
 						}
+
+						//	hidden variables
+						if (dataValue.startsWith('~!')) dataValue = '';
+
 					} else console.warn(colorText(`Variable ${varname} not found`, 'yellow'));
 
 				//	insert text to html document
