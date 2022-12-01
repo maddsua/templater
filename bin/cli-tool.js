@@ -235,14 +235,10 @@ const addNestedPath = (path) => {
 			try {
 				htmltext = fs.readFileSync(srcpath, {encoding: 'utf8'}).toString();
 			} catch (error) {
-				console.error(colorText(`Can't load template file ${srcpath}, error: ${error}`, 'red', 'reverse'));
-				return false;
+				return -1;
 			}
 			
-			if (htmltext.length < 15) {
-				console.warn(`File '${srcpath}' is ${colorText('too short', 'yellow')}, more text is needed to be added`);
-				return true;
-			}
+			if (htmltext.length < 15) return 0;
 			
 			const destDir = separatePath(destpath).dir;
 				if (!fs.existsSync(destDir)) fs.mkdirSync(destDir, { recursive: true });
@@ -250,27 +246,49 @@ const addNestedPath = (path) => {
 			try {
 				fs.writeFileSync(destpath, buildTemplate(htmltext), {encoding: 'utf8'});
 			} catch (error) {
-				console.error(colorText(`Can't write to ${destpath}, error: ${error}`, 'red', 'reverse'));
-				return false;
+				return -2;
 			}
 
-			return true;
+			return 1;
 		};
 
 		const templateFileHandler = (pathObj) => {
-			const result = compileTemplateFile(pathObj.from, pathObj.to);
-				if (result) console.log(colorText(`Processed '${pathObj.from}'`, 'green'));
-				else return;
+
+			switch (compileTemplateFile(pathObj.from, pathObj.to)) {
+				case 1:
+					console.log(colorText(`Processed '${pathObj.from}'`, 'green'));
+					break;
+
+				case 0:
+					console.log(colorText(`Skipped '${pathObj.from}'`, 'yellow'), ': too short');
+					break;
+
+				case -1:
+					console.error(colorText(`Can't load template file ${pathObj.from}`, 'red', 'reverse'));
+					return;
+
+				case -2:
+					console.error(colorText(`Can't write to ${pathObj.to}`, 'red', 'reverse'));
+					return;
+			
+				default:
+					console.error(colorText(`Unknown processing result for ${pathObj.from}`, 'red', 'reverse'));
+					return;
+			}
 	
 			if (watchMode) {
 				let changeHandler = 0;
 				const watchdog = fs.watch(pathObj.from, () => {
+
 					clearTimeout(changeHandler);
 					changeHandler = setTimeout(() => {
+
 						const rebuildResult = compileTemplateFile(pathObj.from, pathObj.to);
 							if (rebuildResult) console.log(colorText(`Rebuilt '${pathObj.from}'`, 'green'));
+
 					}, fsWatch_evHold);
 				});
+
 				sourcesWatchdogs.push(watchdog);
 			}
 		};
@@ -292,7 +310,7 @@ const addNestedPath = (path) => {
 	coreFunction();
 
 	if (watchMode) {
-		console.log('\r\n', colorText(' Waiting for source changes... ', 'blue', 'reverse'));
+		console.log('\r\n', colorText(' Waiting for source changes... ', 'blue', 'reverse'), '\r\n');
 
 		let configChangeHandler = 0;
 		fs.watch(configPath, () => {
@@ -311,6 +329,6 @@ const addNestedPath = (path) => {
 			}, fsWatch_evHold);
 		});
 
-	} else console.log('\r\n', colorText(' Template build done ', 'green', 'reverse'));
+	} else console.log('\r\n', colorText(' Template build done ', 'green', 'reverse'), '\r\n');
 
 })();
