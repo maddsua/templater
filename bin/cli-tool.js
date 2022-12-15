@@ -289,7 +289,7 @@ const addNestedPath = (path) => {
 					changeHandler = setTimeout(() => {
 
 						const rebuildResult = buildTemplate(pathObj.from, pathObj.to);
-							if (rebuildResult) console.log(colorText(`Rebuilt '${pathObj.from}'`, 'green'));
+							if (rebuildResult > 0) console.log(colorText(`Rebuilt '${pathObj.from}'`, 'green'));
 
 					}, fsWatch_evHold);
 				});
