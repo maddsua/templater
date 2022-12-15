@@ -149,9 +149,9 @@ const addNestedPath = (path) => {
 	const coreFunction = () => {
 
 		//	flags
-		const trimPubRoot = config['trimPublicRoot'];
+		let trimPubRoot = config['trimPublicRoot'];
 			if (typeof trimPubRoot !== 'boolean') trimPubRoot = true;
-		const buildIncluded = config['buildIncluded'];
+		let buildIncluded = config['buildIncluded'];
 			if (typeof buildIncluded !== 'boolean') buildIncluded = true;
 
 		//	data variables
