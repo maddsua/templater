@@ -12,6 +12,8 @@
 
 import fs from 'fs';
 
+const configTemplate = '{\r\n\t"sourceDir": "/src/pages/",\r\n\t"publicRoot": "/public/",\r\n\t"trimPublicRoot": true,\r\n\t\r\n\t"files": [\r\n\t\t{\r\n\t\t\t"from": "/src/embed/map.html",\r\n\t\t\t"to": "/public/map.html"\r\n\t\t}\r\n\t],\r\n\t\r\n\t"data": {\r\n\t\t"testString": "Test value"\r\n\t}\r\n}';
+
 /*	/\{\{([\s]{0,}\|[\t]{0,})[\_A-Za-zА-Яа-яІіЇїҐґЄє0-9]{1,}([\s]{0,}\|[\t]{0,})\}\}/g	*/
 const varNameSpace = '\\_A-Za-zА-Яа-яІіЇїҐґЄє0-9';
 const regexes = {
@@ -93,6 +95,7 @@ const normalizePath = (path) => {
 
 
 //	start arguments
+const initMode = process.argv.find((arg) => (arg === 'init') ? true : false);
 const watchMode = process.argv.find((arg) => (arg === '--watch' || arg === '-w')) ? true : false;
 
 let differentRootDir = false;
@@ -114,24 +117,30 @@ const addNestedPath = (path) => {
 //	the main()
 (() => {
 
+	//	init template
+	if (initMode) {
+		try { fs.writeFileSync(configPath, configTemplate); }
+			catch (error) { console.error('\r\n', colorText(` Can't write config file to ${configPath} `, 'green', 'reverse'), '\r\n'); }
+		console.log('\r\n', colorText(' Templater init ok ', 'green', 'reverse'), '\r\n');
+
+		if (!watchMode) process.exit(0);
+	}
+
 	//	load config
 	let config = {};
 
 	const loadConfig = () => {
-		try {
-			config = JSON.parse(fs.readFileSync(configPath).toString());
-		} catch (error) {
-			return `Failed to load config file: can\'t read ${configPath} as json, error: ${error}`;
-		}
+		try { config = JSON.parse(fs.readFileSync(configPath).toString()); }
+			catch (error) { return `Can't load config file from ${configPath}`; }
 		return false;
 	}
 	const configLoadResult = loadConfig();
 		if (configLoadResult) {
-			console.error(configLoadResult);
-			return;
+			console.error('\r\n', colorText(` ${configLoadResult} `, 'red', 'reverse'), '\r\n');
+			process.exit(1);
 		}
 
-		
+	//	control vars
 	let sourcesWatchdogs = [];
 
 	let watchDirectory = false;
@@ -143,8 +152,8 @@ const addNestedPath = (path) => {
 
 		const variables = config['data'];
 		if (typeof variables !== 'object') {
-			console.error('No template data block in config');
-			return;
+			console.error('\r\n', colorText(' No template data block in config ', 'red', 'reverse'), '\r\n');
+			return 0;
 		}
 
 		//	deal with input files
@@ -188,93 +197,84 @@ const addNestedPath = (path) => {
 
 		if (!sourseFiles.length) console.error(colorText('No source files found', 'red', 'bright'));
 
+
 		// process the templates
 
-		const buildTemplate = (templateText) => {
-			//	the c language habits, completely unnecessary here
-			let tempHtml = templateText;
+		const buildTemplate = (srcpath, destpath) => {
 
-			//	find all template literals?... or whatever you call that
-			const allTempVars = tempHtml.match(regexes.template_var);
-			allTempVars?.forEach(tempVar => {
-				//	just to be sure
-				const varname = tempVar.match(regexes.variable)[0];
-					if (!varname) return;
-
-				//	find value or return empty string
-				let dataValue = variables[varname] || '';
-
-					//	data post processing
-					if (dataValue.length > 0) {
-
-						//	load file contents from the path, specifiend in the string
-						if (regexes.var_file.test(dataValue)) {
-							const insertFilePath = normalizePath(dataValue.replace(regexes.var_file, ''));
-							try {
-								dataValue = fs.readFileSync(addNestedPath(insertFilePath), {encoding: 'utf8'}).toString();
-							} catch (error) {
-								dataValue = '';
-								console.warn(colorText(`Included file '${insertFilePath}' not found`, 'yellow'));
-							}
-						}
-
-						//	hidden variables
-						if (dataValue.startsWith('~!')) dataValue = '';
-
-					} else console.warn(colorText(`Variable ${varname} not found`, 'yellow'));
-
-				//	insert text to html document
-				tempHtml = tempHtml.replace(new RegExp(tempVar), dataValue);
-			});
-
-			//	trim public folder path
-			if (publicRoot && trimPubRoot) tempHtml = tempHtml.replace(new RegExp(`/${normalizePath(publicRoot)}/`, 'g'), '/');
-
-			return tempHtml;
-		};
-
-		const compileTemplateFile = (srcpath, destpath) => {
-
-			let htmltext = '';
-			try {
-				htmltext = fs.readFileSync(srcpath, {encoding: 'utf8'}).toString();
-			} catch (error) {
-				return -1;
-			}
+			let templateHtml = '';
+			try { templateHtml = fs.readFileSync(srcpath, {encoding: 'utf8'}).toString(); }
+				catch (error) { return -1; }
 			
-			if (htmltext.length < 15) return 0;
+			if (templateHtml.length < 15) return 0;
 			
 			const destDir = separatePath(destpath).dir;
 				if (!fs.existsSync(destDir)) fs.mkdirSync(destDir, { recursive: true });
 
-			try {
-				fs.writeFileSync(destpath, buildTemplate(htmltext), {encoding: 'utf8'});
-			} catch (error) {
-				return -2;
-			}
+			const pageHtml = ((templateText) => {
+				//	find all template literals?... or whatever you call that
+				const allTempVars = templateText.match(regexes.template_var);
+				allTempVars?.forEach(tempVar => {
+					//	just to be sure
+					const varname = tempVar.match(regexes.variable)[0];
+						if (!varname) return;
+
+					//	find value or return empty string
+					let dataValue = variables[varname] || '';
+
+						//	data post processing
+						if (dataValue.length > 0) {
+
+							//	load file contents from the path, specifiend in the string
+							if (regexes.var_file.test(dataValue)) {
+								const insertFilePath = normalizePath(dataValue.replace(regexes.var_file, ''));
+								try {
+									dataValue = fs.readFileSync(addNestedPath(insertFilePath), {encoding: 'utf8'}).toString();
+								} catch (error) {
+									dataValue = '';
+									console.warn(colorText(`Included file '${insertFilePath}' not found`, 'yellow'));
+								}
+							}
+
+							//	hidden variables
+							if (dataValue.startsWith('~!')) dataValue = '';
+
+						} else console.warn(colorText(`Variable ${varname} not found`, 'yellow'));
+
+					//	insert text to html document
+					templateText = templateText.replace(new RegExp(tempVar), dataValue);
+				});
+
+				//	trim public folder path
+				if (publicRoot && trimPubRoot) templateText = templateText.replace(new RegExp(`/${normalizePath(publicRoot)}/`, 'g'), '/');
+
+				return templateText;
+				
+			})(templateHtml);
+
+			try { fs.writeFileSync(destpath, pageHtml, {encoding: 'utf8'}); }
+				catch (error) { return -2; }
 
 			return 1;
 		};
 
+		let filesSuccessful = 0;
 		const templateFileHandler = (pathObj) => {
 
-			switch (compileTemplateFile(pathObj.from, pathObj.to)) {
+			switch (buildTemplate(pathObj.from, pathObj.to)) {
 				case 1:
 					console.log(colorText(`Processed '${pathObj.from}'`, 'green'));
+					filesSuccessful++;
 					break;
-
 				case 0:
 					console.log(colorText(`Skipped '${pathObj.from}'`, 'yellow'), ': too short');
 					break;
-
 				case -1:
 					console.error(colorText(`Can't load template file ${pathObj.from}`, 'red', 'reverse'));
 					return;
-
 				case -2:
 					console.error(colorText(`Can't write to ${pathObj.to}`, 'red', 'reverse'));
 					return;
-			
 				default:
 					console.error(colorText(`Unknown processing result for ${pathObj.from}`, 'red', 'reverse'));
 					return;
@@ -287,7 +287,7 @@ const addNestedPath = (path) => {
 					clearTimeout(changeHandler);
 					changeHandler = setTimeout(() => {
 
-						const rebuildResult = compileTemplateFile(pathObj.from, pathObj.to);
+						const rebuildResult = buildTemplate(pathObj.from, pathObj.to);
 							if (rebuildResult) console.log(colorText(`Rebuilt '${pathObj.from}'`, 'green'));
 
 					}, fsWatch_evHold);
@@ -309,9 +309,10 @@ const addNestedPath = (path) => {
 				});
 			});
 		}
+		return filesSuccessful;
 	};
 
-	coreFunction();
+	const runResult = coreFunction();
 
 	if (watchMode) {
 		console.log('\r\n', colorText(' Waiting for source changes... ', 'blue', 'reverse'), '\r\n');
@@ -333,6 +334,16 @@ const addNestedPath = (path) => {
 			}, fsWatch_evHold);
 		});
 
-	} else console.log('\r\n', colorText(' Template build done ', 'green', 'reverse'), '\r\n');
+	} else {
+		
+		if (runResult > 0) {
+			console.log('\r\n', colorText(' Template build done ', 'green', 'reverse'), '\r\n');
+			process.exit(0);
+		}
+		else {
+			console.error('\r\n', colorText(' No templates were build ', 'red', 'reverse'), '\r\n');
+			process.exit(3);
+		}
+	}
 
 })();
