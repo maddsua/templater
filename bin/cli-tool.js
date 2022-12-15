@@ -190,7 +190,7 @@ const addNestedPath = (path) => {
 		//	add files, that were found in src directories
 		if (typeof sourceDir === 'string' && publicRoot) {
 			sourceDir = addNestedPath(sourceDir);
-			if (watchMode) watchDirectory = sourceDir;
+			if (watchMode && fs.existsSync(sourceDir)) watchDirectory = sourceDir;
 
 			sourseFiles = sourseFiles.concat(filterNewFiles(findAllFiles(sourceDir)));
 		}
@@ -324,8 +324,13 @@ const addNestedPath = (path) => {
 
 				let configReloadResult = loadConfig();
 				if (!configReloadResult) {
-					srcDirWatchDog.close();
+					if (srcDirWatchDog) {
+						srcDirWatchDog.close();
+						srcDirWatchDog = false;
+					}
+					
 					sourcesWatchdogs.forEach((watchdog) => watchdog.close());
+					
 					console.log('Config reloaded');
 					coreFunction();
 				}
