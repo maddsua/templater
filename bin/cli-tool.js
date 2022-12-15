@@ -306,7 +306,6 @@ const addNestedPath = (path) => {
 				if (!regexes.inputFile.test(filename)) return;
 				filterNewFiles([normalizePath(`${watchDirectory}/${filename}`)], watchDirectory).forEach((newFile) => {
 					sourseFiles.push(newFile);
-					console.log(newFile)
 					templateFileHandler(newFile);
 				});
 			});
