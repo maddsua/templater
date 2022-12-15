@@ -47,9 +47,17 @@ Converts html template:
 	templater.config.json
 ```
 {
-	"sourceDir": "/test_src",
-	"publicRoot": "/test_public",
-	"trimPublicRoot": true,
+	"sourceDir": "/test_src",		//	where to look for source files
+	"publicRoot": "/test_public",	//	destination directory
+	"trimPublicRoot": true,			//	trim path to public directory: "project/public/cat.webp" --> "/cat.webp"
+	"buildIncluded": false,			//	build included files too
+
+	"files": [
+		{
+			"from": "src/add/map.html",
+			"to": "public/map.html"
+		}
+	],
 
 	"data": {
 		"doc_header_text": "Page header",
@@ -60,6 +68,8 @@ Converts html template:
 ```
 
 ## Start arguments
+
+`init`	: Create basic config file
 
 `--config=path` : Specifies the config file
 

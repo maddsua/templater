@@ -148,8 +148,13 @@ const addNestedPath = (path) => {
 
 	const coreFunction = () => {
 
+		//	flags
 		const trimPubRoot = config['trimPublicRoot'];
+			if (typeof trimPubRoot !== 'boolean') trimPubRoot = true;
+		const buildIncluded = config['buildIncluded'];
+			if (typeof buildIncluded !== 'boolean') buildIncluded = true;
 
+		//	data variables
 		const variables = config['data'];
 		if (typeof variables !== 'object') {
 			console.error('\r\n', colorText(' No template data block in config ', 'red', 'reverse'), '\r\n');
@@ -200,8 +205,7 @@ const addNestedPath = (path) => {
 
 
 		// process the templates
-
-		const buildTemplate = (srcpath, destpath) => {
+		const buildTemplateFile = (srcpath, destpath) => {
 
 			let templateHtml = '';
 			try { templateHtml = fs.readFileSync(srcpath, {encoding: 'utf8'}).toString(); }
@@ -212,7 +216,9 @@ const addNestedPath = (path) => {
 			const destDir = separatePath(destpath).dir;
 				if (!fs.existsSync(destDir)) fs.mkdirSync(destDir, { recursive: true });
 
-			const pageHtml = ((templateText) => {
+			//	the builder function itself
+			const buildTemplate = (templateText) => {
+				
 				//	find all template literals?... or whatever you call that
 				const allTempVars = templateText.match(regexes.template_var);
 				allTempVars?.forEach(tempVar => {
@@ -235,6 +241,7 @@ const addNestedPath = (path) => {
 									dataValue = '';
 									console.warn(colorText(`Included file '${insertFilePath}' not found`, 'yellow'));
 								}
+								if (buildIncluded) dataValue = buildTemplate(dataValue);
 							}
 
 							//	hidden variables
@@ -250,10 +257,9 @@ const addNestedPath = (path) => {
 				if (publicRoot && trimPubRoot) templateText = templateText.replace(new RegExp(`/${normalizePath(publicRoot)}/`, 'g'), '/');
 
 				return templateText;
-				
-			})(templateHtml);
+			}
 
-			try { fs.writeFileSync(destpath, pageHtml, {encoding: 'utf8'}); }
+			try { fs.writeFileSync(destpath, buildTemplate(templateHtml), {encoding: 'utf8'}); }
 				catch (error) { return -2; }
 
 			return 1;
@@ -262,7 +268,7 @@ const addNestedPath = (path) => {
 		let filesSuccessful = 0;
 		const templateFileHandler = (pathObj) => {
 
-			switch (buildTemplate(pathObj.from, pathObj.to)) {
+			switch (buildTemplateFile(pathObj.from, pathObj.to)) {
 				case 1:
 					console.log(colorText(`Processed '${pathObj.from}'`, 'green'));
 					filesSuccessful++;
@@ -288,7 +294,7 @@ const addNestedPath = (path) => {
 					clearTimeout(changeHandler);
 					changeHandler = setTimeout(() => {
 
-						const rebuildResult = buildTemplate(pathObj.from, pathObj.to);
+						const rebuildResult = buildTemplateFile(pathObj.from, pathObj.to);
 							if (rebuildResult > 0) console.log(colorText(`Rebuilt '${pathObj.from}'`, 'green'));
 
 					}, fsWatch_evHold);
