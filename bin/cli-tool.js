@@ -50,25 +50,25 @@ const colorText = (text, color, style) => {
 	return (table[color] || table.white) + (styles[style] || '') + text + '\x1b[0m';
 };
 
-const findAllFiles = (searchDir) => {
+const findAllFiles = (inDirectory) => {
 
 	let results = [];
 
-	const dir_search = () => {	
+	const dir_search = (searchDir) => {	
 		if (!fs.existsSync(searchDir)) {
 			console.error(colorText(`Directory '${searchDir}' does not exist`, 'red', 'reverse'));
 			return;
 		}
 
 		fs.readdirSync(searchDir).forEach((file) => {
-			const filename = `${searchDir}/${file}`;
-			const stat = fs.lstatSync(filename);
+			const filaPath = `${searchDir}/${file}`;
+			const stat = fs.lstatSync(filaPath);
 	
-			if (stat.isDirectory()) dir_search() 
-			else if (regexes.inputFile.test(filename)) results.push(filename);
+			if (stat.isDirectory()) dir_search(filaPath);
+			else if (regexes.inputFile.test(filaPath)) results.push(filaPath);
 		})
 	};
-	dir_search();
+	dir_search(inDirectory);
 	
 	return results;
 };
@@ -173,12 +173,13 @@ const addNestedPath = (path) => {
 			});
 		}
 
-		const filterNewFiles = (searchDir) => {
+		const filterNewFiles = (fileList, parentDir) => {
 			let result = [];
 
-			searchDir.forEach((filepath) => {
+			fileList.forEach((filepath) => {
 				const file_from = normalizePath(filepath);
-				const file_to = normalizePath(`${addNestedPath(publicRoot)}/${separatePath(file_from).file}`);
+				const file_to = normalizePath(`${addNestedPath(publicRoot)}/${file_from.replace(parentDir, '')}`);
+
 				if (!sourseFiles.find((item) => (item.from === file_from && item.to === file_to))) {
 					result.push({from: file_from, to: file_to});
 				}
@@ -192,7 +193,7 @@ const addNestedPath = (path) => {
 			sourceDir = addNestedPath(sourceDir);
 			if (watchMode && fs.existsSync(sourceDir)) watchDirectory = sourceDir;
 
-			sourseFiles = sourseFiles.concat(filterNewFiles(findAllFiles(sourceDir)));
+			sourseFiles = sourseFiles.concat(filterNewFiles(findAllFiles(sourceDir), sourceDir));
 		}
 
 		if (!sourseFiles.length) console.error(colorText('No source files found', 'red', 'bright'));
@@ -302,9 +303,10 @@ const addNestedPath = (path) => {
 		if (watchDirectory) {
 			srcDirWatchDog = fs.watch(watchDirectory, {recursive: true}, (eventType, filename) => {
 				if (eventType === 'change') return;
-
-				filterNewFiles([normalizePath(`${watchDirectory}/${filename}`)]).forEach((newFile) => {
+				if (!regexes.inputFile.test(filename)) return;
+				filterNewFiles([normalizePath(`${watchDirectory}/${filename}`)], watchDirectory).forEach((newFile) => {
 					sourseFiles.push(newFile);
+					console.log(newFile)
 					templateFileHandler(newFile);
 				});
 			});
@@ -330,7 +332,7 @@ const addNestedPath = (path) => {
 					}
 					
 					sourcesWatchdogs.forEach((watchdog) => watchdog.close());
-					
+
 					console.log('Config reloaded');
 					coreFunction();
 				}
