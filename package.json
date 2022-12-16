@@ -13,9 +13,6 @@
 	},
 	"scripts": {
 		"build": "tsc",
-		"ts": "tsc",
-		"js_minify": "esbuild --minify --allow-overwrite bin/main.js --outfile=bin/main.js",
-		"build_prod": "npm-run-all ts js_minify",
 		"test": "node ./bin/main.js --config=test/templater.config.json",
 		"watch": "node ./bin/main.js --watch --config=test/templater.config.json"
 	},
@@ -35,8 +32,6 @@
 	"homepage": "https://github.com/maddsua/templater#readme",
 	"devDependencies": {
 		"@types/node": "^16.18.9",
-		"esbuild": "^0.16.7",
-		"typescript": "^4.9.4",
-		"npm-run-all": "^4.1.5"
+		"typescript": "^4.9.4"
 	}
 }
