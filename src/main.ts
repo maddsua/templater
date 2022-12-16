@@ -27,7 +27,7 @@ const regexes = {
 
 const fsWatch_evHold = 50;
 
-const colorText = (text, color, style) => {
+const colorText = (text: string, color: string | null, style: string | null) => {
 	const table = {
 		black: '\x1b[30m',
 		red: '\x1b[31m',
@@ -72,7 +72,7 @@ const findAllFiles = (inDirectory) => {
 	
 	return results;
 };
-const separatePath = (path) => {
+const separatePath = (path:string) => {
 
 	const pathDir = path.match(regexes.directory)[0] || './';
 	const pathFile = pathDir.length > 1 ? path.substring(pathDir.length) : path;
@@ -82,7 +82,7 @@ const separatePath = (path) => {
 		file: pathFile
 	}
 };
-const normalizePath = (path) => {
+const normalizePath = (path:string) => {
 	let temp = path.replace(regexes.dirSlashes, '/');
 
 	if (temp[0] === '.') temp = temp.substring(1);
@@ -98,7 +98,7 @@ const normalizePath = (path) => {
 const initMode = process.argv.find((arg) => (arg === 'init') ? true : false);
 const watchMode = process.argv.find((arg) => (arg === '--watch' || arg === '-w')) ? true : false;
 
-let differentRootDir = false;
+let differentRootDir: string | boolean = false;
 const configPath = ((argpattern) => {
 	const argument = process.argv.find((arg) => arg.startsWith(argpattern));
 	if (typeof argument === 'string') {
@@ -109,7 +109,7 @@ const configPath = ((argpattern) => {
 	return false;
 })('--config=') || './templater.config.json';
 
-const addNestedPath = (path) => {
+const addNestedPath = (path:string) => {
 	if (typeof differentRootDir === 'string') return normalizePath(`${differentRootDir}/${path}`);
 	return normalizePath(path);
 };
@@ -143,8 +143,8 @@ const addNestedPath = (path) => {
 	//	control vars
 	let sourcesWatchdogs = [];
 
-	let watchDirectory = false;
-	let srcDirWatchDog = false;
+	let watchDirectory: string | null = null;
+	let srcDirWatchDog: fs.FSWatcher | null = null;
 
 	const coreFunction = () => {
 
@@ -239,7 +239,7 @@ const addNestedPath = (path) => {
 									dataValue = fs.readFileSync(addNestedPath(insertFilePath), {encoding: 'utf8'}).toString();
 								} catch (error) {
 									dataValue = '';
-									console.warn(colorText(`Included file '${insertFilePath}' not found`, 'yellow'));
+									console.warn(colorText(`Included file '${insertFilePath}' not found`, 'yellow', null));
 								}
 								if (buildIncluded) dataValue = buildTemplate(dataValue);
 							}
@@ -247,7 +247,7 @@ const addNestedPath = (path) => {
 							//	hidden variables
 							if (dataValue.startsWith('~!')) dataValue = '';
 
-						} else console.warn(colorText(`Variable ${varname} not found`, 'yellow'));
+						} else console.warn(colorText(`Variable ${varname} not found`, 'yellow', null));
 
 					//	insert text to html document
 					templateText = templateText.replace(new RegExp(tempVar), dataValue);
@@ -270,11 +270,11 @@ const addNestedPath = (path) => {
 
 			switch (buildTemplateFile(pathObj.from, pathObj.to)) {
 				case 1:
-					console.log(colorText(`Processed '${pathObj.from}'`, 'green'));
+					console.log(colorText(`Processed '${pathObj.from}'`, 'green', null));
 					filesSuccessful++;
 					break;
 				case 0:
-					console.log(colorText(`Skipped '${pathObj.from}'`, 'yellow'), ': too short');
+					console.log(colorText(`Skipped '${pathObj.from}'`, 'yellow', null), ': too short');
 					break;
 				case -1:
 					console.error(colorText(`Can't load template file ${pathObj.from}`, 'red', 'reverse'));
@@ -288,14 +288,14 @@ const addNestedPath = (path) => {
 			}
 	
 			if (watchMode) {
-				let changeHandler = 0;
+				let changeHandler: NodeJS.Timeout | number = 0;
 				const watchdog = fs.watch(pathObj.from, () => {
 
 					clearTimeout(changeHandler);
 					changeHandler = setTimeout(() => {
 
 						const rebuildResult = buildTemplateFile(pathObj.from, pathObj.to);
-							if (rebuildResult > 0) console.log(colorText(`Rebuilt '${pathObj.from}'`, 'green'));
+							if (rebuildResult > 0) console.log(colorText(`Rebuilt '${pathObj.from}'`, 'green', null));
 
 					}, fsWatch_evHold);
 				});
@@ -324,7 +324,7 @@ const addNestedPath = (path) => {
 	if (watchMode) {
 		console.log('\r\n', colorText(' Waiting for source changes... ', 'blue', 'reverse'), '\r\n');
 
-		let configChangeHandler = 0;
+		let configChangeHandler: NodeJS.Timeout | number = 0;
 		fs.watch(configPath, () => {
 			clearTimeout(configChangeHandler);
 			configChangeHandler = setTimeout(() => {
@@ -332,8 +332,8 @@ const addNestedPath = (path) => {
 				let configReloadResult = loadConfig();
 				if (!configReloadResult) {
 					if (srcDirWatchDog) {
-						srcDirWatchDog.close();
-						srcDirWatchDog = false;
+						srcDirWatchDog?.close();
+						srcDirWatchDog = null;
 					}
 					
 					sourcesWatchdogs.forEach((watchdog) => watchdog.close());
@@ -341,7 +341,7 @@ const addNestedPath = (path) => {
 					console.log('Config reloaded');
 					coreFunction();
 				}
-				else console.error(colorText(configReloadResult, 'red'));
+				else console.error(colorText(configReloadResult, 'red', null));
 
 			}, fsWatch_evHold);
 		});

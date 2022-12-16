@@ -1,3 +1,5 @@
 # .npmignore
 publish.cmd
+tsconfig.json
+node_modules/
 test/
