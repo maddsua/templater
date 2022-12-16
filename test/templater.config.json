@@ -8,7 +8,8 @@
 		"first_paragraph": "Lorem ipsum blah blah blah...",
 		"insert_doc": "$file=/include/block.html",
 		"image_alt_text": "A picture of a cat or two",
-		"another_text_line": "Ще одна текстова строка",
-		"змінна_українською": "🇺🇦"
+		"another_text_line": "Ще один текстовий рядок",
+		"змінна_українською": "🇺🇦",
+		"nested_variable": "Вкладена змінна"
 	}
 }
