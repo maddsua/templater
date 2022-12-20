@@ -1,5 +1,5 @@
 # .npmignore
-publish.cmd
+.github/
 tsconfig.json
 node_modules/
 test/
