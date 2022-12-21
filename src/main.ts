@@ -12,18 +12,23 @@
 
 import fs from 'fs';
 
-const configTemplate = '{\r\n\t"sourceDir": "/src/pages/",\r\n\t"publicRoot": "/public/",\r\n\t"trimPublicRoot": true,\r\n\t\r\n\t"files": [\r\n\t\t{\r\n\t\t\t"from": "/src/embed/map.html",\r\n\t\t\t"to": "/public/map.html"\r\n\t\t}\r\n\t],\r\n\t\r\n\t"data": {\r\n\t\t"testString": "Test value"\r\n\t}\r\n}';
+const configTemplate = '{\r\n\t"sourceDir": "/src/pages/",\r\n\t"publicRoot": "/public/",\r\n\t\r\n\t"files": [\r\n\t\t{\r\n\t\t\t"from": "/src/embed/map.html",\r\n\t\t\t"to": "/public/map.html"\r\n\t\t}\r\n\t],\r\n\t\r\n\t"data": {\r\n\t\t"testString": "Test value"\r\n\t}\r\n}';
 
-/*	/\{\{([\s]{0,}\|[\t]{0,})[\_A-Za-zА-Яа-яІіЇїҐґЄє0-9]{1,}([\s]{0,}\|[\t]{0,})\}\}/g	*/
-const varNameSpace = '\\_A-Za-zА-Яа-яІіЇїҐґЄє0-9';
+/*	/\{\{[\s\t]{0,}[\_A-Za-zА-Яа-яІіЇїҐґЄє0-9]{1,}[\s\t]{0,}\}\}/g	*/
+const svcRegexes = {
+	tplOpen: /\{\{[\s\t]{0,}/,
+	tplNs: /\\_A-Za-zА-Яа-яІіЇїҐґЄє0-9/,
+	tplClose: /[\s\t]{0,}\}\}/,
+	precIndent: /\n[\s\t]{1,}/
+};
 const regexes = {
-	template_var: new RegExp(`\\{\\{([\\s]{0,}\|[\\t]{0,})[${varNameSpace}]{1,}([\\s]{0,}\|[\\t]{0,})\\}\\}`, 'g'),
-	variable: new RegExp(`[${varNameSpace}]{1,}`, 'g'),
+	template_var: new RegExp(`${svcRegexes.tplOpen.source}[${svcRegexes.tplNs.source}]{1,}${svcRegexes.tplClose.source}`, 'g'),
+	variable: new RegExp(`[${svcRegexes.tplNs.source}]{1,}`, 'g'),
 	var_file: /^\$file\=/,
 	inputFile: /^.*\.htm(l?)$/,
 	directory: /^.*\//,
 	dirSlashes: /(\/\/)|(\\\\)|(\\)/g
-}
+};
 
 const fsWatch_evHold = 50;
 
@@ -50,11 +55,11 @@ const colorText = (text: string, color: string | null, style: string | null) => 
 	return (table[color] || table.white) + (styles[style] || '') + text + '\x1b[0m';
 };
 
-const findAllFiles = (inDirectory) => {
+const findAllFiles = (inDirectory:string) => {
 
 	let results = [];
 
-	const dir_search = (searchDir) => {	
+	const dir_search = (searchDir:string) => {	
 		if (!fs.existsSync(searchDir)) {
 			console.error(colorText(`Directory '${searchDir}' does not exist`, 'red', 'reverse'));
 			return;
@@ -178,7 +183,7 @@ const addNestedPath = (path:string) => {
 			});
 		}
 
-		const filterNewFiles = (fileList, parentDir) => {
+		const filterNewFiles = (fileList, parentDir:string) => {
 			let result = [];
 
 			fileList.forEach((filepath) => {
@@ -205,7 +210,7 @@ const addNestedPath = (path:string) => {
 
 
 		// process the templates
-		const buildTemplateFile = (srcpath, destpath) => {
+		const buildTemplateFile = (srcpath:string, destpath:string) => {
 
 			let templateHtml = '';
 			try { templateHtml = fs.readFileSync(srcpath, {encoding: 'utf8'}).toString(); }
@@ -217,11 +222,13 @@ const addNestedPath = (path:string) => {
 				if (!fs.existsSync(destDir)) fs.mkdirSync(destDir, { recursive: true });
 
 			//	the builder function itself
-			const buildTemplate = (templateText) => {
+			const buildTemplate = (templateText:string) => {
 				
 				//	find all template literals?... or whatever you call that
 				const allTempVars = templateText.match(regexes.template_var);
+				
 				allTempVars?.forEach(tempVar => {
+
 					//	just to be sure
 					const varname = tempVar.match(regexes.variable)[0];
 						if (!varname) return;
@@ -234,14 +241,27 @@ const addNestedPath = (path:string) => {
 
 							//	load file contents from the path, specifiend in the string
 							if (regexes.var_file.test(dataValue)) {
+
 								const insertFilePath = normalizePath(dataValue.replace(regexes.var_file, ''));
+
+								const getPreceedingIndenting = ((source:string, varName:string) => {
+									const segment = source.match(new RegExp(svcRegexes.precIndent.source + svcRegexes.tplOpen.source + varName));
+										if (!segment.length) return '';
+									return segment[0].slice(1, segment[0].indexOf('{'));
+								});
+
 								try {
 									dataValue = fs.readFileSync(addNestedPath(insertFilePath), {encoding: 'utf8'}).toString();
+
+									const indenting = getPreceedingIndenting(templateText, varname);
+									if (indenting.length) dataValue = dataValue.replaceAll('\n', `\n${indenting}`);
+
 								} catch (error) {
 									dataValue = '';
 									console.warn(colorText(`Included file '${insertFilePath}' not found`, 'yellow', null));
 								}
-								if (buildIncluded) dataValue = buildTemplate(dataValue);
+
+								if (buildIncluded && dataValue.length > 8) dataValue = buildTemplate(dataValue);
 							}
 
 							//	hidden variables
