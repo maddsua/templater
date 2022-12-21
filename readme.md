@@ -34,11 +34,11 @@ Converts html template:
 <img src="/cat_image_2.jpg" alt="" class="src">
 
 <div>
-<ul>
-	<li>Item one</li>
-	<li>Item two</li>
-	<li>Item three</li>
-</ul>
+  <ul>
+    <li>Item one</li>
+    <li>Item two</li>
+    <li>Item three</li>
+  </ul>
 </div>
 ```
 
