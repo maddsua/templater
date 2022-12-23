@@ -48,7 +48,7 @@ Converts html template:
 
 ## Config file properties:
 
-1. `sourceDir` : Directory to look for templates
+1. `srcDir` : Directory to look for templates
 
 2. `destDir` : Destination directory or simply output
 

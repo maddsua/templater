@@ -20,7 +20,7 @@
 
 import fs from 'fs';
 
-const configTemplate = '{\r\n\t"sourceDir": "/src/pages/",\r\n\t"publicRoot": "/public/",\r\n\t\r\n\t"files": [\r\n\t\t{\r\n\t\t\t"from": "/src/embed/map.html",\r\n\t\t\t"to": "/public/map.html"\r\n\t\t}\r\n\t],\r\n\t\r\n\t"data": {\r\n\t\t"testString": "Test value"\r\n\t}\r\n}';
+const configTemplate = '{\r\n\t"srcDir": "/src/pages/",\r\n\t"destDir": "/public/",\r\n\t\r\n\t"files": [\r\n\t\t{\r\n\t\t\t"from": "/src/embed/map.html",\r\n\t\t\t"to": "/public/map.html"\r\n\t\t}\r\n\t],\r\n\t\r\n\t"data": {\r\n\t\t"testString": "Test value"\r\n\t}\r\n}';
 
 /*	/\{\{[\s\t]{0,}[\_A-Za-zА-Яа-яІіЇїҐґЄє0-9]{1,}[\s\t]{0,}\}\}/g	*/
 const svcRegexes = {
@@ -148,7 +148,7 @@ const coreFunction = () => {
 	let files = config['files'];
 		if (typeof files !== 'object' || !files.length) files = [];
 	
-	let sourceDir = config['sourceDir'];
+	let sourceDir = config['srcDir'];
 		if (typeof sourceDir !== 'string') sourceDir = null;
 
 	let destDir = config['destDir'];

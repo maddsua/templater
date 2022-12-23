@@ -1,7 +1,6 @@
 {
-	"sourceDir": "src",
+	"srcDir": "src",
 	"destDir": "public",
-	"trimPublicRoot": "/public/",
 
 	"data": {
 		"navigation": "$file=/include/navbar.htm",	
