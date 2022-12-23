@@ -56,7 +56,7 @@ Converts html template:
 
 `dirScanDepth` : Directory search depth
 
-`files` : Containt exact files to process, example below
+`files` : Contains exact files to process, example below
 
 `data` : All the variables and their values
 
