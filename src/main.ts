@@ -151,12 +151,12 @@ const coreFunction = () => {
 	let sourceDir = config['srcDir'];
 		if (typeof sourceDir !== 'string') sourceDir = null;
 
-	let destDir = config['destDir'];
-		if (typeof destDir !== 'string') destDir = null;
+	let resultDir = config['destDir'];
+		if (typeof resultDir !== 'string') resultDir = null;
 
 	//	flags and values
 	let trimPubRoot = config['trimPublicRoot'];
-		if (typeof trimPubRoot == 'undefined' || trimPubRoot === true) trimPubRoot = destDir;
+		if (typeof trimPubRoot == 'undefined' || trimPubRoot === true) trimPubRoot = resultDir;
 
 	let buildIncluded = config['buildIncluded'];
 		if (typeof buildIncluded !== 'boolean') buildIncluded = true;
@@ -204,7 +204,7 @@ const coreFunction = () => {
 
 		fileList.forEach((filepath) => {
 			const file_from = normalizePath(filepath);
-			const file_to = normalizePath(`${addNestedPath(destDir)}/${file_from.replace(parentDir, '')}`);
+			const file_to = normalizePath(`${addNestedPath(resultDir)}/${file_from.replace(parentDir, '')}`);
 
 			if (!sourseFiles.find((item) => (item.from === file_from && item.to === file_to))) {
 				result.push({from: file_from, to: file_to});
@@ -240,7 +240,7 @@ const coreFunction = () => {
 	};
 
 	//	add files, that were found in the src dirs
-	if (sourceDir && destDir) {
+	if (sourceDir && resultDir) {
 		sourceDir = addNestedPath(sourceDir);
 		if (watchMode && fs.existsSync(sourceDir)) watchDirectory = sourceDir;
 
