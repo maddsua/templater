@@ -42,6 +42,25 @@ Converts html template:
 </div>
 ```
 
+## Config file properties:
+
+`sourceDir` : Directory to look for templates
+
+`publicRoot` : Destination directory or simply output
+
+`trimPublicRoot` : Convert path like this: `"public/app/logo.svg"` to `"app/logo.svg"`
+
+`buildIncluded` : Try to build included files as templates
+
+`maxNestedTemplates` : How many templates can be included inside each other
+
+`dirScanDepth` : Directory search depth
+
+`files` : Containt exact files to process, example below
+
+`data` : All the variables and their values
+
+
 ## Config file example:
 
 	templater.config.json
