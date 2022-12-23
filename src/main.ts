@@ -146,7 +146,7 @@ const coreFunction = () => {
 
 	//	flags and values
 	let trimPubRoot = config['trimPublicRoot'];
-		if (typeof trimPubRoot !== 'boolean') trimPubRoot = true;
+		if (typeof trimPubRoot !== 'string') trimPubRoot = false;
 
 	let buildIncluded = config['buildIncluded'];
 		if (typeof buildIncluded !== 'boolean') buildIncluded = true;
@@ -170,7 +170,7 @@ const coreFunction = () => {
 	//	deal with input files
 	const files = config['files'];
 	let sourceDir = config['sourceDir'];
-	const publicRoot = config['publicRoot'];
+	const destDir = config['destDir'];
 
 	const addNestedPath = (path:string) => {
 		if (typeof differentRootDir === 'string') return normalizePath(`${differentRootDir}/${path}`);
@@ -194,7 +194,7 @@ const coreFunction = () => {
 
 		fileList.forEach((filepath) => {
 			const file_from = normalizePath(filepath);
-			const file_to = normalizePath(`${addNestedPath(publicRoot)}/${file_from.replace(parentDir, '')}`);
+			const file_to = normalizePath(`${addNestedPath(destDir)}/${file_from.replace(parentDir, '')}`);
 
 			if (!sourseFiles.find((item) => (item.from === file_from && item.to === file_to))) {
 				result.push({from: file_from, to: file_to});
@@ -230,7 +230,7 @@ const coreFunction = () => {
 	};
 
 	//	add files, that were found in the src dirs
-	if (typeof sourceDir === 'string' && publicRoot) {
+	if (typeof sourceDir === 'string' && destDir) {
 		sourceDir = addNestedPath(sourceDir);
 		if (watchMode && fs.existsSync(sourceDir)) watchDirectory = sourceDir;
 
@@ -293,13 +293,16 @@ const coreFunction = () => {
 								const getPreceedingIndenting = ((source:string, varName:string) => {
 									//	get the line containing template literal and the previous one
 									const segment = source.match(new RegExp(svcRegexes.precIndent.source + svcRegexes.tplOpen.source + varName));
-										//	abort if not found
-										if (!segment.length) return '';
+										if (!segment?.length) return '';	//	abort if not found
 
 									//	get all the chars starting from previous string and to '{' sign
-									const format = segment[0].slice(1, segment[0].indexOf('{'));
-									//	cut only the current line, remove LF's and return the result
-									return format.slice(format.lastIndexOf('\n')).replace(/[\r\n]+/g, '');
+									let format = segment[0].slice(1, segment[0].indexOf('{'));
+
+									//	cut only the current line, if were captured two
+									if (format.match(/\n/g)?.length) format = format.slice(format.lastIndexOf('\n'));
+
+									//	remove LF's and return the result
+									return format.replace(/[\r\n]+/g, '');
 								});
 
 								const inclDocPath = addNestedPath(dataValue.replace(regexes.var_file, ''));
@@ -377,7 +380,7 @@ const coreFunction = () => {
 				}
 
 				//	trim public folder path
-				if (publicRoot && trimPubRoot) templateText = templateText.replace(new RegExp(`/${normalizePath(publicRoot)}/`, 'g'), '/');
+				if (trimPubRoot) templateText = templateText.replace(new RegExp(`/${normalizePath(trimPubRoot)}/`, 'g'), '/');
 
 				return templateText;
 			}
@@ -416,7 +419,7 @@ const coreFunction = () => {
 			let changeHandler: NodeJS.Timeout | number = 0;
 			const watchdog = fs.watch(pathObj.from, () => {
 				clearTimeout(changeHandler);
-				changeHandler = setTimeout(() => rebuildTemplate, fsWatch_evHold);
+				changeHandler = setTimeout(() => rebuildTemplate(), fsWatch_evHold);
 			});
 			sourcesWatchdogs.push(watchdog);
 		}

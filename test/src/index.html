@@ -1,13 +1,22 @@
+<div class="page-top">
+	{{ navigation }}
 
-<h1>{{ doc_header_text }}</h1>
-<p>{{ first_paragraph }}</p>
-
-<img src="/public/cat_image_1.jpg" alt="{{ image_alt_text }}">
-<img src="/public/cat_image_2.jpg" alt="{{ image_alt_text }}">
-
-<div>
-	{{ insert_doc }}
+	<ul class="contacts">
+		<li>
+			<p>Call anytime:</p>
+			<a href="tel:{{ contacts_phone }}">{{ contacts_phone }}</a>
+		</li>
+		<li>
+			<p>Or email us:</p>
+			<a href="mailto:{{ contacts_email }}">{{ contacts_email }}</a>
+		</li>
+	</ul>
 </div>
 
-<p>{{ another_text_line }}</p>
-<div>{{ змінна_українською }}</div>
+
+<article>
+	<h1>The best cookies recepie at {{ website_domain }}</h1>
+	<p>Standart lorem ipsum blah blah blah...</p>
+
+	<img src="/public/assets/cookie.webp" alt="cookie">
+</article>

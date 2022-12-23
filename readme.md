@@ -10,6 +10,8 @@ Let's say, you have to place a company's phone number in 15 places on a page. If
 
  \- Hehe \[visibly nervous\]. Well yes, Netlify allows you to use PHP as a build tool, so that it could be used to put that text in place. The thing is, I don't like PHP's syntax and it would be like driving a nail with an anvil
 
+---
+
 ## So, basically it does two things:
 
 Converts html template:
@@ -42,13 +44,15 @@ Converts html template:
 </div>
 ```
 
+---
+
 ## Config file properties:
 
 `sourceDir` : Directory to look for templates
 
 `publicRoot` : Destination directory or simply output
 
-`trimPublicRoot` : Convert path like this: `"public/app/logo.svg"` to `"app/logo.svg"`
+`trimPublicRoot` : A part of resourese path to remove so the result will look like this: `"public/app/logo.svg"` --> `"app/logo.svg"`
 
 `buildIncluded` : Try to build included files as templates
 
@@ -60,31 +64,11 @@ Converts html template:
 
 `data` : All the variables and their values
 
+### Config file example:
 
-## Config file example:
+[templater.config.json](test/templater.config.json)
 
-	templater.config.json
-```
-{
-	"sourceDir": "/test_src",		//	where to look for source files
-	"publicRoot": "/test_public",	//	destination directory
-	"trimPublicRoot": true,			//	trim path to public directory: "project/public/cat.webp" --> "/cat.webp"
-	"buildIncluded": false,			//	build included files too
-
-	"files": [
-		{
-			"from": "src/add/map.html",
-			"to": "public/map.html"
-		}
-	],
-
-	"data": {
-		"doc_header_text": "Page header",
-		"first_paragraph": "Lorem ipsum blah blah blah...",
-		"insert_doc": "$file=/test_include/block.html"
-	}
-}
-```
+---
 
 ## Start arguments
 
@@ -93,3 +77,6 @@ Converts html template:
 `--config=path` : Specifies the config file
 
 `--watch` : Does the same as for typescript or sass (ok, it's 'rebuild on change')
+
+---
+Run `npm test` and check out the [test](test/) directory

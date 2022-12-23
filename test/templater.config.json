@@ -1,16 +1,15 @@
 {
 	"sourceDir": "src",
-	"publicRoot": "public",
-	"trimPublicRoot": true,
+	"destDir": "public",
+	"trimPublicRoot": "/public/",
 
 	"data": {
-		"doc_header_text": "Page header",
-		"first_paragraph": "Lorem ipsum blah blah blah...",
-		"insert_doc": "$file=/include/block.html",
-		"image_alt_text": "A picture of a cat or two",
-		"another_text_line": "Ще один текстовий рядок",
-		"змінна_українською": "🇺🇦",
-		"nested_variable": "Вкладена змінна",
-		"snippet": "$file=/include/snippet.html"
+		"navigation": "$file=/include/navbar.htm",	
+		"pages_map": "$file=/include/sitemap.htm",
+
+		"contacts_phone": "+380000000000",
+		"contacts_email": "example@example.com",
+
+		"website_domain": "example.com"
 	}
 }
