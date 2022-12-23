@@ -10,6 +10,7 @@
 		"image_alt_text": "A picture of a cat or two",
 		"another_text_line": "Ще один текстовий рядок",
 		"змінна_українською": "🇺🇦",
-		"nested_variable": "Вкладена змінна"
+		"nested_variable": "Вкладена змінна",
+		"snippet": "$file=/include/snippet.html"
 	}
 }

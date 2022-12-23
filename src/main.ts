@@ -38,7 +38,9 @@ const regexes = {
 	dirSlashes: /(\/\/)|(\\\\)|(\\)/g
 };
 
+//	very important consts
 const fsWatch_evHold = 50;
+const minSrcFileLength = 16;
 
 const colorText = (text: string, color: string | null, style: string | null) => {
 	const table = {
@@ -204,10 +206,10 @@ const coreFunction = () => {
 
 	const findAllFiles = (inDirectory:string, depth:number) => {
 		let results = [];
-		let nesting = 0;
+		let nested = -1;	//	(0 - 1) so on the first run the nesting will be equal to zero
 	
 		const dir_search = (searchDir:string) => {	
-			nesting++;
+			nested++;
 	
 			if (!fs.existsSync(searchDir)) {
 				console.error(colorText(`Directory '${searchDir}' does not exist`, 'red', 'reverse'));
@@ -218,7 +220,7 @@ const coreFunction = () => {
 				const filaPath = `${searchDir}/${file}`;
 				const stat = fs.lstatSync(filaPath);
 		
-				if (stat.isDirectory() && nesting < depth) dir_search(filaPath);
+				if (stat.isDirectory() && nested < depth) dir_search(filaPath);
 				else if (regexes.inputFile.test(filaPath)) results.push(filaPath);
 			})
 		};
@@ -227,7 +229,7 @@ const coreFunction = () => {
 		return results;
 	};
 
-	//	add files, that were found in src directories
+	//	add files, that were found in the src dirs
 	if (typeof sourceDir === 'string' && publicRoot) {
 		sourceDir = addNestedPath(sourceDir);
 		if (watchMode && fs.existsSync(sourceDir)) watchDirectory = sourceDir;
@@ -248,7 +250,7 @@ const coreFunction = () => {
 			try { templateHtml = fs.readFileSync(srcpath, {encoding: 'utf8'}).toString(); }
 				catch (error) { return -1; }
 			
-			if (templateHtml.length < 15) return 0;
+			if (templateHtml.length < minSrcFileLength) return 0;
 			
 			const destDir = separatePath(destpath).dir;
 				if (!fs.existsSync(destDir)) fs.mkdirSync(destDir, { recursive: true });
@@ -288,19 +290,25 @@ const coreFunction = () => {
 							//	load file contents from the path, specifiend in the string
 							if (regexes.var_file.test(dataValue)) {
 
-								const inclDocPath = addNestedPath(dataValue.replace(regexes.var_file, ''));
-
 								const getPreceedingIndenting = ((source:string, varName:string) => {
+									//	get the line containing template literal and the previous one
 									const segment = source.match(new RegExp(svcRegexes.precIndent.source + svcRegexes.tplOpen.source + varName));
+										//	abort if not found
 										if (!segment.length) return '';
-									return segment[0].slice(1, segment[0].indexOf('{'));
+
+									//	get all the chars starting from previous string and to '{' sign
+									const format = segment[0].slice(1, segment[0].indexOf('{'));
+									//	cut only the current line, remove LF's and return the result
+									return format.slice(format.lastIndexOf('\n')).replace(/[\r\n]+/g, '');
 								});
+
+								const inclDocPath = addNestedPath(dataValue.replace(regexes.var_file, ''));
 
 								try {
 									dataValue = fs.readFileSync(inclDocPath, {encoding: 'utf8'}).toString();
 
 									const syntaxIndenting = getPreceedingIndenting(templateText, tempVar.name);
-										if (syntaxIndenting.length) dataValue = dataValue.replaceAll('\n', `\n${syntaxIndenting}`);
+										if (syntaxIndenting.length) dataValue = dataValue.replace(/\n/g, `\n${syntaxIndenting}`);
 
 									if (watchMode && watchIncluded) {
 
