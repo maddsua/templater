@@ -8,6 +8,14 @@
 	Use it however you want
 	I don't guarantee anything, but at very least, this package is safe from dependency-related security issues
 
+	The structure of this code is cursed 💀, so don't touch it unless you are ready to waste
+	several hours of your life trying to figure out how it works.
+	Bc even I don't 😎
+	
+	And, it also contains several cringe moments, just bc I hate using oop for everything here and there
+
+	P.S.2: Bring your own ketchup if you actually wanna try this noodles-code out
+
 */
 
 import fs from 'fs';
@@ -55,28 +63,7 @@ const colorText = (text: string, color: string | null, style: string | null) => 
 	return (table[color] || table.white) + (styles[style] || '') + text + '\x1b[0m';
 };
 
-const findAllFiles = (inDirectory:string) => {
 
-	let results = [];
-
-	const dir_search = (searchDir:string) => {	
-		if (!fs.existsSync(searchDir)) {
-			console.error(colorText(`Directory '${searchDir}' does not exist`, 'red', 'reverse'));
-			return;
-		}
-
-		fs.readdirSync(searchDir).forEach((file) => {
-			const filaPath = `${searchDir}/${file}`;
-			const stat = fs.lstatSync(filaPath);
-	
-			if (stat.isDirectory()) dir_search(filaPath);
-			else if (regexes.inputFile.test(filaPath)) results.push(filaPath);
-		})
-	};
-	dir_search(inDirectory);
-	
-	return results;
-};
 const separatePath = (path:string) => {
 
 	const pathDir = path.match(regexes.directory)[0] || './';
@@ -97,8 +84,6 @@ const normalizePath = (path:string) => {
 	return temp;
 };
 
-
-
 //	start arguments
 const initMode = process.argv.find((arg) => (arg === 'init') ? true : false);
 const watchMode = process.argv.find((arg) => (arg === '--watch' || arg === '-w')) ? true : false;
@@ -114,100 +99,144 @@ const configPath = ((argpattern) => {
 	return false;
 })('--config=') || './templater.config.json';
 
-const addNestedPath = (path:string) => {
-	if (typeof differentRootDir === 'string') return normalizePath(`${differentRootDir}/${path}`);
-	return normalizePath(path);
+
+//	init template
+if (initMode) {
+	try { fs.writeFileSync(configPath, configTemplate); }
+		catch (error) { console.error('\r\n', colorText(` Can't write config file to ${configPath} `, 'green', 'reverse'), '\r\n'); }
+	console.log('\r\n', colorText(' Templater init ok ', 'green', 'reverse'), '\r\n');
+
+	if (!watchMode) process.exit(0);
+}
+
+//	load config
+let config = {};
+
+const loadConfig = () => {
+	try { config = JSON.parse(fs.readFileSync(configPath).toString()); }
+		catch (error) { return `Can't load config file from ${configPath}`; }
+	return false;
+}
+const configLoadResult = loadConfig();
+	if (configLoadResult) {
+		console.error('\r\n', colorText(` ${configLoadResult} `, 'red', 'reverse'), '\r\n');
+		process.exit(1);
+	}
+
+//	control vars
+const sourcesWatchdogs = [];
+
+interface _wathchIncludedFile {
+	variable: string,
+	watchdog: fs.FSWatcher,
+	_evTiomeout: NodeJS.Timeout | number
 };
+interface _wathchIncludedFiles {
+	parent: string,
+	files: _wathchIncludedFile[]
+};
+const includedWatchdogs = Array<_wathchIncludedFiles>(0);
 
-//	the main()
-(() => {
+let watchDirectory: string | null = null;
+let srcDirWatchDog: fs.FSWatcher | null = null;
 
-	//	init template
-	if (initMode) {
-		try { fs.writeFileSync(configPath, configTemplate); }
-			catch (error) { console.error('\r\n', colorText(` Can't write config file to ${configPath} `, 'green', 'reverse'), '\r\n'); }
-		console.log('\r\n', colorText(' Templater init ok ', 'green', 'reverse'), '\r\n');
+const coreFunction = () => {
 
-		if (!watchMode) process.exit(0);
-	}
+	//	flags and values
+	let trimPubRoot = config['trimPublicRoot'];
+		if (typeof trimPubRoot !== 'boolean') trimPubRoot = true;
 
-	//	load config
-	let config = {};
+	let buildIncluded = config['buildIncluded'];
+		if (typeof buildIncluded !== 'boolean') buildIncluded = true;
 
-	const loadConfig = () => {
-		try { config = JSON.parse(fs.readFileSync(configPath).toString()); }
-			catch (error) { return `Can't load config file from ${configPath}`; }
-		return false;
-	}
-	const configLoadResult = loadConfig();
-		if (configLoadResult) {
-			console.error('\r\n', colorText(` ${configLoadResult} `, 'red', 'reverse'), '\r\n');
-			process.exit(1);
-		}
+	let dirScanDepth = config['dirScanDepth'];
+		if (typeof dirScanDepth !== 'number') dirScanDepth = 10;
 
-	//	control vars
-	let sourcesWatchdogs = [];
+	let watchIncluded = config['watchIncluded'];
+		if (typeof watchIncluded !== 'boolean') watchIncluded = true;
 
-	let watchDirectory: string | null = null;
-	let srcDirWatchDog: fs.FSWatcher | null = null;
-
-	const coreFunction = () => {
-
-		//	flags
-		let trimPubRoot = config['trimPublicRoot'];
-			if (typeof trimPubRoot !== 'boolean') trimPubRoot = true;
-		let buildIncluded = config['buildIncluded'];
-			if (typeof buildIncluded !== 'boolean') buildIncluded = true;
-
-		//	data variables
-		const variables = config['data'];
+	//	data variables
+	const variables = config['data'];
 		if (typeof variables !== 'object') {
 			console.error('\r\n', colorText(' No template data block in config ', 'red', 'reverse'), '\r\n');
 			return 0;
 		}
 
-		//	deal with input files
-		const files = config['files'];
-		let sourceDir = config['sourceDir'];
-		const publicRoot = config['publicRoot'];
+	//	deal with input files
+	const files = config['files'];
+	let sourceDir = config['sourceDir'];
+	const publicRoot = config['publicRoot'];
 
-		let sourseFiles = [];
+	const addNestedPath = (path:string) => {
+		if (typeof differentRootDir === 'string') return normalizePath(`${differentRootDir}/${path}`);
+		return normalizePath(path);
+	};
 
-		//	add specified files
-		if (typeof files?.length === 'number') {
-			files.forEach((file) => {
-				if (typeof file.from === 'string' && typeof file.to === 'string') sourseFiles.push({
-					from: addNestedPath(file.from),
-					to: addNestedPath(file.to)
-				});
+	let sourseFiles = [];
+
+	//	add specified files
+	if (typeof files?.length === 'number') {
+		files.forEach((file:object) => {
+			if (typeof file['from'] === 'string' && typeof file['to'] === 'string') sourseFiles.push({
+				from: addNestedPath(file['from']),
+				to: addNestedPath(file['to'])
 			});
-		}
+		});
+	}
 
-		const filterNewFiles = (fileList, parentDir:string) => {
-			let result = [];
+	const filterNewFiles = (fileList:Array<string>, parentDir:string) => {
+		let result = [];
 
-			fileList.forEach((filepath) => {
-				const file_from = normalizePath(filepath);
-				const file_to = normalizePath(`${addNestedPath(publicRoot)}/${file_from.replace(parentDir, '')}`);
+		fileList.forEach((filepath) => {
+			const file_from = normalizePath(filepath);
+			const file_to = normalizePath(`${addNestedPath(publicRoot)}/${file_from.replace(parentDir, '')}`);
 
-				if (!sourseFiles.find((item) => (item.from === file_from && item.to === file_to))) {
-					result.push({from: file_from, to: file_to});
-				}
-			});
+			if (!sourseFiles.find((item) => (item.from === file_from && item.to === file_to))) {
+				result.push({from: file_from, to: file_to});
+			}
+		});
 
-			return result;
-		}
+		return result;
+	}
 
-		//	add files, that were found in src directories
-		if (typeof sourceDir === 'string' && publicRoot) {
-			sourceDir = addNestedPath(sourceDir);
-			if (watchMode && fs.existsSync(sourceDir)) watchDirectory = sourceDir;
+	const findAllFiles = (inDirectory:string, depth:number) => {
+		let results = [];
+		let nesting = 0;
+	
+		const dir_search = (searchDir:string) => {	
+			nesting++;
+	
+			if (!fs.existsSync(searchDir)) {
+				console.error(colorText(`Directory '${searchDir}' does not exist`, 'red', 'reverse'));
+				return;
+			}
+	
+			fs.readdirSync(searchDir).forEach((file) => {
+				const filaPath = `${searchDir}/${file}`;
+				const stat = fs.lstatSync(filaPath);
+		
+				if (stat.isDirectory() && nesting < depth) dir_search(filaPath);
+				else if (regexes.inputFile.test(filaPath)) results.push(filaPath);
+			})
+		};
+		dir_search(inDirectory);
+		
+		return results;
+	};
 
-			sourseFiles = sourseFiles.concat(filterNewFiles(findAllFiles(sourceDir), sourceDir));
-		}
+	//	add files, that were found in src directories
+	if (typeof sourceDir === 'string' && publicRoot) {
+		sourceDir = addNestedPath(sourceDir);
+		if (watchMode && fs.existsSync(sourceDir)) watchDirectory = sourceDir;
 
-		if (!sourseFiles.length) console.error(colorText('No source files found', 'red', 'bright'));
+		sourseFiles = sourseFiles.concat(filterNewFiles(findAllFiles(sourceDir, dirScanDepth), sourceDir));
+	}
 
+	if (!sourseFiles.length) console.error(colorText('No source files found', 'red', 'bright'));
+
+
+	let filesSuccessful = 0;
+	const templateFileHandler = (pathObj) => {
 
 		// process the templates
 		const buildTemplateFile = (srcpath:string, destpath:string) => {
@@ -221,20 +250,33 @@ const addNestedPath = (path:string) => {
 			const destDir = separatePath(destpath).dir;
 				if (!fs.existsSync(destDir)) fs.mkdirSync(destDir, { recursive: true });
 
+			let included = includedWatchdogs.find((item) => item.parent === srcpath);
+
+			//	set to (0 - 1) so during the first run it will be equal to zero 
+			let nestedTemplate = -1;
+
 			//	the builder function itself
 			const buildTemplate = (templateText:string) => {
+				nestedTemplate++;
 				
 				//	find all template literals?... or whatever you call that
-				const allTempVars = templateText.match(regexes.template_var);
+				interface _tempLiteral {
+					pattern: string,
+					name: string
+				};
+				const allVariables = (() => {
+					let tempVars = Array<_tempLiteral>(0);
+					templateText.match(regexes.template_var)?.forEach((literal) => {
+						const varname = literal.match(regexes.variable)[0];
+						if (typeof varname === 'string') tempVars.push({pattern: literal, name: varname});
+					});
+					return tempVars;
+				})();
 				
-				allTempVars?.forEach(tempVar => {
-
-					//	just to be sure
-					const varname = tempVar.match(regexes.variable)[0];
-						if (!varname) return;
+				allVariables.forEach(tempVar => {
 
 					//	find value or return empty string
-					let dataValue = variables[varname] || '';
+					let dataValue = variables[tempVar.name] || '';
 
 						//	data post processing
 						if (dataValue.length > 0) {
@@ -242,7 +284,7 @@ const addNestedPath = (path:string) => {
 							//	load file contents from the path, specifiend in the string
 							if (regexes.var_file.test(dataValue)) {
 
-								const insertFilePath = normalizePath(dataValue.replace(regexes.var_file, ''));
+								const inclDocPath = addNestedPath(dataValue.replace(regexes.var_file, ''));
 
 								const getPreceedingIndenting = ((source:string, varName:string) => {
 									const segment = source.match(new RegExp(svcRegexes.precIndent.source + svcRegexes.tplOpen.source + varName));
@@ -251,14 +293,41 @@ const addNestedPath = (path:string) => {
 								});
 
 								try {
-									dataValue = fs.readFileSync(addNestedPath(insertFilePath), {encoding: 'utf8'}).toString();
+									dataValue = fs.readFileSync(inclDocPath, {encoding: 'utf8'}).toString();
 
-									const indenting = getPreceedingIndenting(templateText, varname);
-									if (indenting.length) dataValue = dataValue.replaceAll('\n', `\n${indenting}`);
+									const syntaxIndenting = getPreceedingIndenting(templateText, tempVar.name);
+										if (syntaxIndenting.length) dataValue = dataValue.replaceAll('\n', `\n${syntaxIndenting}`);
+
+									if (watchMode && watchIncluded) {
+
+										if (!included) {
+											included = {
+												parent: srcpath,
+												files: Array<_wathchIncludedFile>(0)
+											}
+											includedWatchdogs.push(included);
+										}
+
+										if (!included.files.find((item) => item.variable === tempVar.name)) {
+//	! fix this bs asap
+											//	well, the only idea I have is to convert the object to a class,
+											//	so I could use 'this' to access it's properties
+											//	fucking oop everywhere
+											let this_timeout: NodeJS.Timeout | number = 0;
+											included.files.push({
+												_evTiomeout: this_timeout,
+												variable: tempVar.name,
+												watchdog: fs.watch(inclDocPath, () => {
+													clearTimeout(this_timeout);
+													this_timeout = setTimeout(() => rebuildTemplate(), fsWatch_evHold);
+												})
+											});
+										}
+									}
 
 								} catch (error) {
 									dataValue = '';
-									console.warn(colorText(`Included file '${insertFilePath}' not found`, 'yellow', null));
+									console.warn(colorText(`Included file '${inclDocPath}' not found`, 'yellow', null));
 								}
 
 								if (buildIncluded && dataValue.length > 8) dataValue = buildTemplate(dataValue);
@@ -267,11 +336,26 @@ const addNestedPath = (path:string) => {
 							//	hidden variables
 							if (dataValue.startsWith('~!')) dataValue = '';
 
-						} else console.warn(colorText(`Variable ${varname} not found`, 'yellow', null));
+						} else console.warn(colorText(`Variable ${tempVar.name} not found`, 'yellow', null));
 
 					//	insert text to html document
-					templateText = templateText.replace(new RegExp(tempVar), dataValue);
+					templateText = templateText.replace(tempVar.pattern, dataValue);
 				});
+
+				//	clean up unused watchdogs and merge
+				if (included && !nestedTemplate) {
+
+					included.files.forEach((wdog) => {
+						if (!allVariables.find((item) => item.name === wdog.variable)) {
+							wdog.watchdog.close();
+							included.files = included.files.filter((item) => item !== wdog);
+						}
+					});
+
+					if (!included.files.length) {
+						includedWatchdogs.filter((item) => item.parent !== included.parent);
+					}
+				}
 
 				//	trim public folder path
 				if (publicRoot && trimPubRoot) templateText = templateText.replace(new RegExp(`/${normalizePath(publicRoot)}/`, 'g'), '/');
@@ -285,97 +369,90 @@ const addNestedPath = (path:string) => {
 			return 1;
 		};
 
-		let filesSuccessful = 0;
-		const templateFileHandler = (pathObj) => {
+		switch (buildTemplateFile(pathObj.from, pathObj.to)) {
+			case 1:
+				console.log(colorText(`Processed '${pathObj.from}'`, 'green', null));
+				filesSuccessful++;
+				break;
+			case 0:
+				console.log(colorText(`Skipped '${pathObj.from}'`, 'yellow', null), ': too short');
+				break;
+			case -1:
+				console.error(colorText(`Can't load template file ${pathObj.from}`, 'red', 'reverse'));
+				return;
+			case -2:
+				console.error(colorText(`Can't write to ${pathObj.to}`, 'red', 'reverse'));
+				return;
+			default:
+				console.error(colorText(`Unknown processing result for ${pathObj.from}`, 'red', 'reverse'));
+				return;
+		}
 
-			switch (buildTemplateFile(pathObj.from, pathObj.to)) {
-				case 1:
-					console.log(colorText(`Processed '${pathObj.from}'`, 'green', null));
-					filesSuccessful++;
-					break;
-				case 0:
-					console.log(colorText(`Skipped '${pathObj.from}'`, 'yellow', null), ': too short');
-					break;
-				case -1:
-					console.error(colorText(`Can't load template file ${pathObj.from}`, 'red', 'reverse'));
-					return;
-				case -2:
-					console.error(colorText(`Can't write to ${pathObj.to}`, 'red', 'reverse'));
-					return;
-				default:
-					console.error(colorText(`Unknown processing result for ${pathObj.from}`, 'red', 'reverse'));
-					return;
-			}
-	
-			if (watchMode) {
-				let changeHandler: NodeJS.Timeout | number = 0;
-				const watchdog = fs.watch(pathObj.from, () => {
-
-					clearTimeout(changeHandler);
-					changeHandler = setTimeout(() => {
-
-						const rebuildResult = buildTemplateFile(pathObj.from, pathObj.to);
-							if (rebuildResult > 0) console.log(colorText(`Rebuilt '${pathObj.from}'`, 'green', null));
-
-					}, fsWatch_evHold);
-				});
-
-				sourcesWatchdogs.push(watchdog);
-			}
+		const rebuildTemplate = () => {
+			const rebuildResult = buildTemplateFile(pathObj.from, pathObj.to);
+				if (rebuildResult > 0) console.log(colorText(`Rebuilt '${pathObj.from}'`, 'green', null));
 		};
 
-		sourseFiles.forEach(item => templateFileHandler(item));
-
-		if (watchDirectory) {
-			srcDirWatchDog = fs.watch(watchDirectory, {recursive: true}, (eventType, filename) => {
-				if (eventType === 'change') return;
-				if (!regexes.inputFile.test(filename)) return;
-				filterNewFiles([normalizePath(`${watchDirectory}/${filename}`)], watchDirectory).forEach((newFile) => {
-					sourseFiles.push(newFile);
-					templateFileHandler(newFile);
-				});
+		if (watchMode) {
+			let changeHandler: NodeJS.Timeout | number = 0;
+			const watchdog = fs.watch(pathObj.from, () => {
+				clearTimeout(changeHandler);
+				changeHandler = setTimeout(() => rebuildTemplate, fsWatch_evHold);
 			});
+			sourcesWatchdogs.push(watchdog);
 		}
-		return filesSuccessful;
 	};
 
-	const runResult = coreFunction();
+	sourseFiles.forEach(item => templateFileHandler(item));
 
-	if (watchMode) {
-		console.log('\r\n', colorText(' Waiting for source changes... ', 'blue', 'reverse'), '\r\n');
-
-		let configChangeHandler: NodeJS.Timeout | number = 0;
-		fs.watch(configPath, () => {
-			clearTimeout(configChangeHandler);
-			configChangeHandler = setTimeout(() => {
-
-				let configReloadResult = loadConfig();
-				if (!configReloadResult) {
-					if (srcDirWatchDog) {
-						srcDirWatchDog?.close();
-						srcDirWatchDog = null;
-					}
-					
-					sourcesWatchdogs.forEach((watchdog) => watchdog.close());
-
-					console.log('Config reloaded');
-					coreFunction();
-				}
-				else console.error(colorText(configReloadResult, 'red', null));
-
-			}, fsWatch_evHold);
+	if (watchDirectory) {
+		srcDirWatchDog = fs.watch(watchDirectory, {recursive: true}, (eventType, filename) => {
+			if (eventType === 'change') return;
+			if (!regexes.inputFile.test(filename)) return;
+			filterNewFiles([normalizePath(`${watchDirectory}/${filename}`)], watchDirectory).forEach((newFile) => {
+				sourseFiles.push(newFile);
+				templateFileHandler(newFile);
+			});
 		});
-
-	} else {
-		
-		if (runResult > 0) {
-			console.log('\r\n', colorText(' Template build done ', 'green', 'reverse'), '\r\n');
-			process.exit(0);
-		}
-		else {
-			console.error('\r\n', colorText(' No templates were build ', 'red', 'reverse'), '\r\n');
-			process.exit(3);
-		}
 	}
+	return filesSuccessful;
+};
 
-})();
+const runResult = coreFunction();
+
+if (watchMode) {
+	console.log('\r\n', colorText(' Waiting for source changes... ', 'blue', 'reverse'), '\r\n');
+
+	let configChangeHandler: NodeJS.Timeout | number = 0;
+	fs.watch(configPath, () => {
+		clearTimeout(configChangeHandler);
+		configChangeHandler = setTimeout(() => {
+
+			let configReloadResult = loadConfig();
+			if (!configReloadResult) {
+				if (srcDirWatchDog) {
+					srcDirWatchDog?.close();
+					srcDirWatchDog = null;
+				}
+				
+				sourcesWatchdogs.forEach((watchdog) => watchdog.close());
+
+				console.log('Config reloaded');
+				coreFunction();
+			}
+			else console.error(colorText(configReloadResult, 'red', null));
+
+		}, fsWatch_evHold);
+	});
+
+} else {
+	
+	if (runResult > 0) {
+		console.log('\r\n', colorText(' Template build done ', 'green', 'reverse'), '\r\n');
+		process.exit(0);
+	}
+	else {
+		console.error('\r\n', colorText(' No templates were build ', 'red', 'reverse'), '\r\n');
+		process.exit(3);
+	}
+}
