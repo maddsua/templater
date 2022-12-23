@@ -247,7 +247,10 @@ const coreFunction = () => {
 		sourseFiles = sourseFiles.concat(filterNewFiles(findAllFiles(sourceDir, dirScanDepth), sourceDir));
 	}
 
-	if (!sourseFiles.length) console.error(colorText('No source files found', 'red', 'bright'));
+	if (!sourseFiles.length) {
+		console.error(colorText('No source files found', 'red', 'bright'));
+		console.log('Check if the config file contains source and destination directory path, or a list of files');
+	}
 
 	let filesSuccessful = 0;
 	const templateFileHandler = (pathObj:_pathObj) => {
