@@ -48,21 +48,23 @@ Converts html template:
 
 ## Config file properties:
 
-`sourceDir` : Directory to look for templates
+1. `sourceDir` : Directory to look for templates
 
-`publicRoot` : Destination directory or simply output
+2. `destDir` : Destination directory or simply output
 
-`trimPublicRoot` : A part of resourese path to remove so the result will look like this: `"public/app/logo.svg"` --> `"app/logo.svg"`
+3. `trimPublicRoot` : A part of resourese path to remove so the result will look like this: `"public/app/logo.svg"` --> `"app/logo.svg"`
 
-`buildIncluded` : Try to build included files as templates
+	Must be a valid string or boolean `false`. Defaults to `destDir` if set as `true` or if omitted.
 
-`maxNestedTemplates` : How many templates can be included inside each other
+4. `buildIncluded` : Try to build included files as templates
 
-`dirScanDepth` : Directory search depth
+5. `maxNestedTemplates` : How many templates can be included inside each other
 
-`files` : Contains exact files to process, example below
+6. `dirScanDepth` : Directory search depth
 
-`data` : All the variables and their values
+7. `files` : Contains exact files to process, example below
+
+8. `data` : All the variables and their values
 
 ### Config file example:
 

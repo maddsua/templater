@@ -144,9 +144,19 @@ let srcDirWatchDog: fs.FSWatcher | null = null;
 
 const coreFunction = () => {
 
+	//	input files
+	let files = config['files'];
+		if (typeof files !== 'object' || !files.length) files = [];
+	
+	let sourceDir = config['sourceDir'];
+		if (typeof sourceDir !== 'string') sourceDir = null;
+
+	let destDir = config['destDir'];
+		if (typeof destDir !== 'string') destDir = null;
+
 	//	flags and values
 	let trimPubRoot = config['trimPublicRoot'];
-		if (typeof trimPubRoot !== 'string') trimPubRoot = false;
+		if (typeof trimPubRoot == 'undefined' || trimPubRoot === true) trimPubRoot = destDir;
 
 	let buildIncluded = config['buildIncluded'];
 		if (typeof buildIncluded !== 'boolean') buildIncluded = true;
@@ -167,17 +177,17 @@ const coreFunction = () => {
 			return 0;
 		}
 
-	//	deal with input files
-	const files = config['files'];
-	let sourceDir = config['sourceDir'];
-	const destDir = config['destDir'];
-
 	const addNestedPath = (path:string) => {
 		if (typeof differentRootDir === 'string') return normalizePath(`${differentRootDir}/${path}`);
 		return normalizePath(path);
 	};
 
-	let sourseFiles = [];
+	interface _pathObj {
+		from: string,
+		to: string
+	};
+
+	let sourseFiles = Array<_pathObj>(0);
 
 	//	add specified files
 	if (typeof files?.length === 'number') {
@@ -230,7 +240,7 @@ const coreFunction = () => {
 	};
 
 	//	add files, that were found in the src dirs
-	if (typeof sourceDir === 'string' && destDir) {
+	if (sourceDir && destDir) {
 		sourceDir = addNestedPath(sourceDir);
 		if (watchMode && fs.existsSync(sourceDir)) watchDirectory = sourceDir;
 
@@ -239,9 +249,8 @@ const coreFunction = () => {
 
 	if (!sourseFiles.length) console.error(colorText('No source files found', 'red', 'bright'));
 
-
 	let filesSuccessful = 0;
-	const templateFileHandler = (pathObj) => {
+	const templateFileHandler = (pathObj:_pathObj) => {
 
 		// process the templates
 		const buildTemplateFile = (srcpath:string, destpath:string) => {
@@ -380,7 +389,7 @@ const coreFunction = () => {
 				}
 
 				//	trim public folder path
-				if (trimPubRoot) templateText = templateText.replace(new RegExp(`/${normalizePath(trimPubRoot)}/`, 'g'), '/');
+				if (typeof trimPubRoot === 'string') templateText = templateText.replace(new RegExp(`/${normalizePath(trimPubRoot)}/`, 'g'), '/');
 
 				return templateText;
 			}
