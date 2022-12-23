@@ -152,6 +152,9 @@ const coreFunction = () => {
 	let dirScanDepth = config['dirScanDepth'];
 		if (typeof dirScanDepth !== 'number') dirScanDepth = 10;
 
+	let maxNestedTemplates = config['maxNestedTemplates'];
+		if (typeof maxNestedTemplates !== 'number') maxNestedTemplates = 3;
+
 	let watchIncluded = config['watchIncluded'];
 		if (typeof watchIncluded !== 'boolean') watchIncluded = true;
 
@@ -254,6 +257,7 @@ const coreFunction = () => {
 
 			//	set to (0 - 1) so during the first run it will be equal to zero 
 			let nestedTemplate = -1;
+			let allTemplateVars = Array<string>(0);
 
 			//	the builder function itself
 			const buildTemplate = (templateText:string) => {
@@ -264,16 +268,16 @@ const coreFunction = () => {
 					pattern: string,
 					name: string
 				};
-				const allVariables = (() => {
-					let tempVars = Array<_tempLiteral>(0);
+				const templateVars = Array<_tempLiteral>(0);
 					templateText.match(regexes.template_var)?.forEach((literal) => {
 						const varname = literal.match(regexes.variable)[0];
-						if (typeof varname === 'string') tempVars.push({pattern: literal, name: varname});
+						if (typeof varname === 'string') {
+							templateVars.push({pattern: literal, name: varname});
+							allTemplateVars.push(varname);
+						}
 					});
-					return tempVars;
-				})();
 				
-				allVariables.forEach(tempVar => {
+				templateVars.forEach(tempVar => {
 
 					//	find value or return empty string
 					let dataValue = variables[tempVar.name] || '';
@@ -330,7 +334,14 @@ const coreFunction = () => {
 									console.warn(colorText(`Included file '${inclDocPath}' not found`, 'yellow', null));
 								}
 
-								if (buildIncluded && dataValue.length > 8) dataValue = buildTemplate(dataValue);
+								if (buildIncluded && dataValue.length > 8) {
+									if (nestedTemplate <= maxNestedTemplates) {
+										dataValue = buildTemplate(dataValue);
+									} else {
+										dataValue = '';
+										console.warn(colorText(`File '${inclDocPath}' nested too deeply. Skipped`, 'yellow', null));
+									}
+								}
 							}
 
 							//	hidden variables
@@ -346,7 +357,7 @@ const coreFunction = () => {
 				if (included && !nestedTemplate) {
 
 					included.files.forEach((wdog) => {
-						if (!allVariables.find((item) => item.name === wdog.variable)) {
+						if (!allTemplateVars.find((item) => item === wdog.variable)) {
 							wdog.watchdog.close();
 							included.files = included.files.filter((item) => item !== wdog);
 						}
