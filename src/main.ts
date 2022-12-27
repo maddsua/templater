@@ -215,7 +215,7 @@ const coreFunction = () => {
 	}
 
 	const findAllFiles = (inDirectory:string, depth:number) => {
-		let results = [];
+		let results = Array<string>(0);
 		let nested = -1;	//	(0 - 1) so on the first run the nesting will be equal to zero
 	
 		const dir_search = (searchDir:string) => {	
