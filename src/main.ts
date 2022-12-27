@@ -230,7 +230,13 @@ const coreFunction = () => {
 				const filePath = `${searchDir}/${file}`;
 				const stat = fs.lstatSync(filePath);
 		
-				if (stat.isDirectory() && nested < depth) dir_search(filePath);
+				if (stat.isDirectory()) {
+					nested++;
+					if (nested < depth) {
+						dir_search(filePath);
+						nested--;
+					}
+				}
 				else if (regexes.inputFile.test(filePath)) results.push(filePath);
 			})
 		};
