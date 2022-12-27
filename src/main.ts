@@ -227,11 +227,11 @@ const coreFunction = () => {
 			}
 	
 			fs.readdirSync(searchDir).forEach((file) => {
-				const filaPath = `${searchDir}/${file}`;
-				const stat = fs.lstatSync(filaPath);
+				const filePath = `${searchDir}/${file}`;
+				const stat = fs.lstatSync(filePath);
 		
-				if (stat.isDirectory() && nested < depth) dir_search(filaPath);
-				else if (regexes.inputFile.test(filaPath)) results.push(filaPath);
+				if (stat.isDirectory() && nested < depth) dir_search(filePath);
+				else if (regexes.inputFile.test(filePath)) results.push(filePath);
 			})
 		};
 		dir_search(inDirectory);
